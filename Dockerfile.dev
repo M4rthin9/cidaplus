@@ -1,0 +1,17 @@
+# Development image only. The production build is phase 11 and is built in CI —
+# a Next.js production build alongside Postgres will OOM the 6 GB VPS (SPEC.md §2).
+FROM node:22-alpine
+
+RUN corepack enable
+
+WORKDIR /app
+
+# Dependencies are installed into the image so a bind-mounted source tree does
+# not need a populated node_modules on the host.
+COPY package.json pnpm-lock.yaml* ./
+RUN pnpm install --frozen-lockfile || pnpm install
+
+COPY . .
+
+EXPOSE 3000
+CMD ["pnpm", "dev"]

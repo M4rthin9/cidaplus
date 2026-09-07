@@ -68,4 +68,24 @@ upload, originals over the threshold are dropped, and the admin dashboard shows 
 
 ## Learned
 
-_(empty — append as we go)_
+**Phase 0**
+
+- **`next build` copies `.env` into `.next/standalone/.env`,** and the standalone server loads it
+  from there. Two consequences. First, a CI image built on a checkout that has a `.env` ships those
+  secrets inside the image — §11 builds in CI and pulls on the VPS, so make the CI job assert `.env`
+  is absent before `pnpm build`. Second, it makes local fail-fast testing lie: the server picks up
+  the baked file even when the variable is unset in the environment. Delete `.env` and rebuild
+  before testing env validation.
+- **Next catches a throw from `instrumentation.register()`** and keeps the process alive serving
+  500s — the container stays "running", so `restart: unless-stopped` never fires and the only
+  symptom is a dead site. `src/instrumentation.ts` therefore logs and calls `process.exit(1)`
+  instead of letting the error propagate.
+- **Tailwind v4 `@theme` is the right home for the DESIGN.md tokens.** Utilities compile to
+  `var(--color-*)`, so phase 6 can override the custom properties on `<html>` from `settings.theme`
+  and the whole site retunes with no rebuild. Nothing in `globals.css` needs to change for that.
+- `eslint-config-next` 15 is still eslintrc-shaped; the flat config goes through `FlatCompat` from
+  `@eslint/eslintrc`. Keep `eslint` on 9.x — `eslint-config-next` 15 does not declare support for 10.
+- Prettier does not touch `docs/` or any `*.md`. SPEC.md and DESIGN.md are authoritative,
+  hand-aligned prose and tables; reflowing them churns the diff and breaks the table columns.
+- Pinned exact versions everywhere, no ranges. The box is rebuilt rarely and debugged remotely, so
+  a silent minor bump months from now is a bad trade for freshness.

@@ -1,0 +1,101 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens — docs/DESIGN.md is authoritative.
+ *
+ * These are DEFAULTS ONLY. From phase 6 the values come from `settings.theme`
+ * and are injected onto <html> at render time, so the admin can retune the site
+ * without a rebuild. Because every utility below compiles to `var(--color-*)`,
+ * overriding the custom property at runtime is enough — nothing here needs to
+ * change when that lands.
+ *
+ * Never hard-code a hex value in a component (CLAUDE.md).
+ */
+@theme {
+  --color-bg: #ffffff;
+  --color-surface: #f8f6f5;
+  --color-surface-alt: #efeae8;
+
+  --color-heading: #241c1e;
+  --color-text: #574e50;
+  --color-text-muted: #6f6467;
+
+  --color-brand: #8c1330;
+  --color-brand-hover: #6e0e26;
+  --color-brand-tint: #fbf1f3;
+
+  --color-accent: #0b7a3f;
+  --color-accent-tint: #e8f5ec;
+  --color-accent-ink: #075c2f;
+
+  --color-border: #e2dad8;
+
+  /* Lives inside the seal artwork only — 1.6:1 on white. Never text, never a surface. */
+  --color-seal-gold: #f0ca3c;
+
+  --radius-card: 8px;
+  --radius-control: 6px;
+
+  --container-site: 1200px;
+
+  /*
+   * Anuphan is self-hosted from phase 7 (no Google Fonts CDN — SPEC.md §2).
+   * Until the woff2 subsets land, the stack falls through to the platform Thai
+   * face, which keeps metrics close enough that layouts reviewed now still hold.
+   */
+  --font-sans:
+    "Anuphan", "Noto Sans Thai", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+/*
+ * Thai typography is correctness, not taste (docs/DESIGN.md).
+ * Diacritics stack above and below the baseline and clip at Latin leading.
+ */
+:root {
+  color-scheme: light;
+}
+
+html {
+  background-color: var(--color-bg);
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.8;
+  letter-spacing: 0; /* never track Thai — it breaks visual word grouping */
+  word-break: normal;
+  overflow-wrap: break-word;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  color: var(--color-heading);
+  line-height: 1.45;
+  letter-spacing: 0;
+  text-wrap: balance;
+}
+
+/* Inline Latin and numerals inside Thai headings, tuned independently. */
+.lat {
+  font-feature-settings: "tnum";
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
