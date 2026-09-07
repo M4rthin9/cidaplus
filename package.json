@@ -19,18 +19,24 @@
     "db:generate": "node --env-file-if-exists=.env node_modules/drizzle-kit/bin.cjs generate",
     "db:migrate": "node --env-file-if-exists=.env node_modules/drizzle-kit/bin.cjs migrate",
     "db:push": "node --env-file-if-exists=.env node_modules/drizzle-kit/bin.cjs push",
-    "db:seed": "tsx --env-file-if-exists=.env src/db/seed.ts"
+    "db:seed": "tsx --env-file-if-exists=.env src/db/seed.ts",
+    "admin:create": "tsx --env-file-if-exists=.env scripts/create-admin.ts"
   },
   "dependencies": {
+    "@node-rs/argon2": "2.2.0",
+    "clsx": "^2.1.1",
     "drizzle-orm": "0.45.2",
     "next": "15.5.25",
+    "next-auth": "5.0.0-beta.32",
     "postgres": "3.4.9",
     "react": "19.1.9",
     "react-dom": "19.1.9",
+    "tailwind-merge": "^3.6.0",
     "uuid": "14.0.2",
     "zod": "4.5.4"
   },
   "devDependencies": {
+    "@auth/core": "0.41.3",
     "@eslint/eslintrc": "3.3.7",
     "@tailwindcss/postcss": "4.3.3",
     "@types/node": "22.20.1",

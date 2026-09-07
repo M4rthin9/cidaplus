@@ -72,7 +72,7 @@ SMTP provider, which is not needed to boot (§11).
 | Admin UI | shadcn/ui + TanStack Table + dnd-kit (reordering) | |
 | Database | **PostgreSQL 16** in Docker | |
 | ORM | **Drizzle ORM** + drizzle-kit migrations | Lightweight, SQL-first, easy to review the generated schema. |
-| Auth | **Auth.js v5**, credentials provider, sessions in Postgres | Admin-only. Argon2id password hashing. Confirmed — see §14 decision 11. |
+| Auth | **Auth.js v5**, credentials provider, **JWT sessions** | Admin-only. Argon2id password hashing. Auth.js refuses database sessions with credentials — see §14 decisions 11 and 13. |
 | Media | Local volume + **sharp** derivative pipeline, served through Next `/api/media` or directly by Caddy | Avoids the RAM cost of MinIO. Add MinIO later only if you outgrow the disk. |
 | i18n | **next-intl**, DB-backed messages | Thai only in v1 (§14 decision 9). The `*_i18n` tables and `locales.is_enabled` still ship in phase 1, so enabling a locale stays a row insert. Translations come from the DB, not JSON message files, for anything content-shaped. |
 | Rich text | **Tiptap** → stored as JSON, rendered server-side | Never store raw HTML from the editor. |
@@ -472,6 +472,8 @@ Answered — treat these as settled, not as open questions.
 | 10 | **The palette is rebuilt around the seal.** Crimson `#8C1330`, LINE green `#0B7A3F`, warm neutrals; no blue anywhere. The previous navy `#10294B` / green `#17A66B` were chosen before the logo existed and clash with it, and `#17A66B` fails WCAG AA (3.13:1) as a button fill with a white label. See `docs/DESIGN.md`. Settled 2026-09-07. |
 | 11 | **Auth is Auth.js v5**, credentials provider, sessions in Postgres, Argon2id hashing. This closes the last `[DECIDE]` that blocked phase 0. Settled 2026-09-07. |
 | 12 | **No `revisions` table.** §9's "last 10 revisions with one-click restore" is dropped: `audit_log` already stores a field-level diff on every mutation, and localStorage autosave covers in-progress loss. Restore-from-audit can be added later without a schema change. Settled 2026-09-07. |
+| 13 | **Sessions are JWT, not Postgres rows.** `@auth/core` asserts "Signing in with credentials only supported if JWT strategy is enabled", so §3's original wording was not buildable. Revocation — the capability database sessions were wanted for — is recovered by `users.session_version`: deactivating a user, changing a password, or changing a role bumps it, and `requireAdmin()` rejects any token minted before the bump. Settled 2026-09-07. |
+| 14 | **Login lockout is persisted on `users`,** not an in-memory counter. §13's "in-memory token bucket is fine" still governs *rate limiting* (one source, short burst); the per-account lockout is a different mechanism and lives in `failed_login_attempts` / `locked_until`, because an in-memory counter would reset on every deploy. 5 attempts, 15-minute lock. Settled 2026-09-07. |
 
 ### Still open — ask before the phase that needs them
 

@@ -113,3 +113,34 @@ upload, originals over the threshold are dropped, and the admin dashboard shows 
   state (docs/DESIGN.md) is exercised from day one, which is the state that will ship longest.
 - Local Postgres 16.13 is installed on this box, so phases can be verified without Docker:
   `initdb -D /tmp/pgdata -U cida --auth=trust` then `pg_ctl -D /tmp/pgdata -o '-p 5432 -k /tmp' start`.
+
+**Phase 2**
+
+- **Auth.js cannot do database sessions with the credentials provider.** `@auth/core` asserts
+  "Signing in with credentials only supported if JWT strategy is enabled", so §3's original wording
+  was unbuildable. Sessions are JWT; revocation comes from `users.session_version`, compared in
+  `requireAdmin()`. Bump it whenever access changes — deactivate, password change, role change.
+- **The middleware is not the security boundary.** It runs on the edge runtime where neither
+  `@node-rs/argon2` (native) nor the postgres driver can load, so it only proves a cookie parses.
+  `requireAdmin()` / `requireOwner()` in `src/lib/auth/session.ts` is authoritative, and every admin
+  page and server action must call it. Verified: the middleware bundle contains no argon2, postgres
+  or drizzle code.
+- **`declare module` silently no-ops when the specifier is unresolvable.** `@auth/core` is a
+  transitive dep and pnpm's strict layout does not hoist it, so `declare module "@auth/core/jwt"`
+  created a *new* ambient module instead of augmenting the real one — with no error. It is now a
+  direct devDependency pinned to the exact version next-auth resolves. Augmenting `next-auth/jwt`
+  does nothing: it is a bare re-export of `@auth/core/jwt`.
+- **`JWT extends Record<string, unknown>`,** so inside the config's own callback types the augmented
+  claims widen back to `unknown`. The `session` callback annotates `token: JWT` explicitly.
+- **`Algorithm` from `@node-rs/argon2` is a `const enum`,** which `isolatedModules` forbids
+  importing as a value. The numeric member is spelled out and asserted by a test on the
+  `$argon2id$` digest prefix.
+- **Audit diffs redact `passwordHash`, `password` and `sessionVersion`** but still record that the
+  field changed, so a rotation is auditable without the material reaching the table. Verified
+  against real Postgres: zero audit rows contain an argon2 string.
+- **`writeAudit` takes the executor** so it joins the caller's transaction. An audit row that
+  survives a rolled-back mutation is a lie.
+- Failed logins for an unknown email still run a real argon2 verify against a decoy digest, so
+  response time cannot enumerate accounts.
+- Do not use `pkill` in this session — it kills the agent's own shell.
+
