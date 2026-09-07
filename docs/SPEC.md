@@ -61,7 +61,8 @@ Consequences you must design around:
 
 ## 3. Technology stack
 
-**[DECIDE]** — this is the recommended stack. Confirm or substitute before starting.
+Confirmed 2026-09-07 (§14 decisions 9 and 11). The only remaining **[DECIDE]** in this table is the
+SMTP provider, which is not needed to boot (§11).
 
 | Layer | Choice | Why |
 |---|---|---|
@@ -71,9 +72,9 @@ Consequences you must design around:
 | Admin UI | shadcn/ui + TanStack Table + dnd-kit (reordering) | |
 | Database | **PostgreSQL 16** in Docker | |
 | ORM | **Drizzle ORM** + drizzle-kit migrations | Lightweight, SQL-first, easy to review the generated schema. |
-| Auth | **Auth.js v5** (credentials provider) or **better-auth**, sessions in Postgres | Admin-only. Argon2id password hashing. |
+| Auth | **Auth.js v5**, credentials provider, sessions in Postgres | Admin-only. Argon2id password hashing. Confirmed — see §14 decision 11. |
 | Media | Local volume + **sharp** derivative pipeline, served through Next `/api/media` or directly by Caddy | Avoids the RAM cost of MinIO. Add MinIO later only if you outgrow the disk. |
-| i18n | **next-intl** with `/[locale]` routing, three locales | Thai default, English and Simplified Chinese. Translations come from the DB, not JSON message files, for anything content-shaped. |
+| i18n | **next-intl**, DB-backed messages | Thai only in v1 (§14 decision 9). The `*_i18n` tables and `locales.is_enabled` still ship in phase 1, so enabling a locale stays a row insert. Translations come from the DB, not JSON message files, for anything content-shaped. |
 | Rich text | **Tiptap** → stored as JSON, rendered server-side | Never store raw HTML from the editor. |
 | Validation | **Zod** schemas shared between server actions and forms | |
 | Reverse proxy | **Caddy 2** — automatic Let's Encrypt TLS, HTTP/3, compression | One-line TLS. Nginx is fine if you prefer, but then wire up certbot. |
@@ -468,6 +469,7 @@ Answered — treat these as settled, not as open questions.
 | 8 | **The site belongs to ทัณฑสถานบำบัดพิเศษกลาง** (กรมราชทัณฑ์, กระทรวงยุติธรรม) and use of the seal is authorized. It is an official institutional site, not a shop: the affiliation is visible above the fold, and the care-nation.com reference contributes section rhythm only. Settled 2026-09-07. |
 | 9 | **v1 ships Thai only.** The `*_i18n` tables, the `locales` table and `is_enabled` are still built in phase 1 exactly as §6 specifies — adding a language stays a row insert — but no English or Chinese public routes ship until a translator is assigned. This retires §14.4 and defers §14.5. Settled 2026-09-07. |
 | 10 | **The palette is rebuilt around the seal.** Crimson `#8C1330`, LINE green `#0B7A3F`, warm neutrals; no blue anywhere. The previous navy `#10294B` / green `#17A66B` were chosen before the logo existed and clash with it, and `#17A66B` fails WCAG AA (3.13:1) as a button fill with a white label. See `docs/DESIGN.md`. Settled 2026-09-07. |
+| 11 | **Auth is Auth.js v5**, credentials provider, sessions in Postgres, Argon2id hashing. This closes the last `[DECIDE]` that blocked phase 0. Settled 2026-09-07. |
 
 ### Still open — ask before the phase that needs them
 
@@ -484,10 +486,7 @@ Answered — treat these as settled, not as open questions.
 
 3. **SMTP provider, when chosen.** Phase 7. The contact form must work without it (§9).
 
-4. **Auth library — §3 `[DECIDE]` is still a fork.** Auth.js v5 or better-auth. This lands in
-   `package.json`, so it blocks phase 0. Everything else in the §3 stack table is confirmed.
-
-5. **EN admin toggle — §9 `[DECIDE]`.** All admin copy is Thai. Whether an English admin toggle is
+4. **EN admin toggle — §9 `[DECIDE]`.** All admin copy is Thai. Whether an English admin toggle is
    also wanted affects phase 2. Assume no unless told otherwise.
 
 ### Raised by the seal, not yet in any phase
