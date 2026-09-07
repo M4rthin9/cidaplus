@@ -292,8 +292,9 @@ The operator is a non-technical Thai staff member. Optimize for that.
 
 - **Thai-first UI.** Every admin label, button, toast, validation message, and empty state is in Thai.
   Latin only for values the operator types. `[DECIDE]` if you also want an EN admin toggle.
-- **Never lose work.** Autosave drafts to `localStorage` every 5s while editing, warn on navigate-away
-  with unsaved changes, and keep the last 10 revisions per product/post with one-click restore.
+- **Never lose work.** Autosave drafts to `localStorage` every 5s while editing and warn on
+  navigate-away with unsaved changes. ~~Keep the last 10 revisions per product/post with one-click
+  restore~~ — superseded by §14 decision 12: `audit_log` holds the field-level history instead.
 - **Images are the hard part.** The media picker must support drag-and-drop upload, multi-select,
   paste-from-clipboard, crop to the required aspect ratio (3:4 for products, 16:9 for post covers)
   before saving, and enforce `alt_th` before publish. Auto-generate AVIF + WebP + JPEG fallback at
@@ -470,6 +471,7 @@ Answered — treat these as settled, not as open questions.
 | 9 | **v1 ships Thai only.** The `*_i18n` tables, the `locales` table and `is_enabled` are still built in phase 1 exactly as §6 specifies — adding a language stays a row insert — but no English or Chinese public routes ship until a translator is assigned. This retires §14.4 and defers §14.5. Settled 2026-09-07. |
 | 10 | **The palette is rebuilt around the seal.** Crimson `#8C1330`, LINE green `#0B7A3F`, warm neutrals; no blue anywhere. The previous navy `#10294B` / green `#17A66B` were chosen before the logo existed and clash with it, and `#17A66B` fails WCAG AA (3.13:1) as a button fill with a white label. See `docs/DESIGN.md`. Settled 2026-09-07. |
 | 11 | **Auth is Auth.js v5**, credentials provider, sessions in Postgres, Argon2id hashing. This closes the last `[DECIDE]` that blocked phase 0. Settled 2026-09-07. |
+| 12 | **No `revisions` table.** §9's "last 10 revisions with one-click restore" is dropped: `audit_log` already stores a field-level diff on every mutation, and localStorage autosave covers in-progress loss. Restore-from-audit can be added later without a schema change. Settled 2026-09-07. |
 
 ### Still open — ask before the phase that needs them
 

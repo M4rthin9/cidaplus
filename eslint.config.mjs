@@ -20,6 +20,11 @@ const config = [
       "no-console": ["warn", { allow: ["warn", "error"] }],
     },
   },
+  {
+    // CLI entry points. Printing a result table IS their output, not a stray log.
+    files: ["scripts/**/*.ts", "src/db/seed.ts", "drizzle.config.ts"],
+    rules: { "no-console": "off" },
+  },
 ];
 
 export default config;
