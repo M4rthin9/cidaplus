@@ -30,34 +30,58 @@ Mobile: hamburger drawer, single-column stacking, sticky bottom "สั่งซ
 
 ## Visual direction
 
-Professional and warm. White background throughout, deep navy for headings, blue for links and
-primary actions, and a fresh green reserved for community messaging and the LINE handoff. This catalog includes
-funeral wreaths, so the tone stays respectful — generous whitespace, no festive styling, no urgency
-banners, no discount badges. Warmth comes from the photography and the community story, not from
-decoration.
+Official, professional, warm. This is the public catalog of **ทัณฑสถานบำบัดพิเศษกลาง**
+(กรมราชทัณฑ์ กระทรวงยุติธรรม), so institutional credibility comes first: the affiliation is visible
+above the fold, not buried in a footer. White background throughout, warm near-black for headings,
+the seal's crimson for navigation and links, and a single deep green reserved for the LINE handoff.
+This catalog includes funeral wreaths, so the tone stays respectful — generous whitespace, no festive
+styling, no urgency banners, no discount badges. Warmth comes from the photography and the vocational
+story, not from decoration.
 
-**Color is semantic. Each color has exactly one job:**
+The layout reference in the section above is a **commercial** shop. Take its section rhythm and
+nothing else: an official site earns trust by showing who it is, not by looking like a store.
 
-| Token | Hex | Used for | Never used for |
-|---|---|---|---|
-| `--color-bg` | `#FFFFFF` | Page background | |
-| `--color-surface` | `#F6F9FC` | Section bands, cards, input fields | |
-| `--color-surface-alt` | `#EDF2F8` | Image placeholders, hover states | |
-| `--color-heading` | `#10294B` | All headings, product names, prices | Body paragraphs |
-| `--color-text` | `#4A5A6E` | Body text | Headings |
-| `--color-text-muted` | `#7C8BA0` | Captions, timestamps, meta | Anything load-bearing |
-| `--color-link` | `#1A5FD0` | Links, primary buttons, "ดูทั้งหมด" | Community messaging |
-| `--color-link-hover` | `#14499E` | Link/button hover | |
-| `--color-accent` | `#17A66B` | LINE button, community band, checkmarks | Generic decoration |
-| `--color-accent-tint` | `#E8F7F0` | Community band background, LINE-related pills | Large areas |
-| `--color-accent-ink` | `#0B6B45` | Text on `--color-accent-tint` | Text on white |
-| `--color-border` | `#E4EAF1` | Hairlines, card borders | |
+**Color is semantic. Each color has exactly one job.** The palette is derived from the seal —
+crimson field, gold artwork, black rings — not chosen independently of it.
 
-Rules: green appears **only** on community-story and LINE elements — if green shows up on a generic
-button, it has lost its meaning. Blue is for navigation and action. Never place body text directly on
-`--color-accent`; use `--color-accent-tint` with `--color-accent-ink`. All values live in
-`settings.theme` and render as CSS custom properties on `<html>`, so the admin can retune them
-without a rebuild. Every component reads the variables — no hard-coded hex anywhere in a component.
+| Token | Hex | On white | Used for | Never used for |
+|---|---|---|---|---|
+| `--color-bg` | `#FFFFFF` | — | Page background | |
+| `--color-surface` | `#F8F6F5` | — | Section bands, cards, input fields | |
+| `--color-surface-alt` | `#EFEAE8` | — | Image placeholders, hover states | |
+| `--color-heading` | `#241C1E` | 16.7:1 | All headings, product names, prices | Body paragraphs. **Never crimson** — too loud at heading scale, and wrong beside wreaths |
+| `--color-text` | `#574E50` | 8.0:1 | Body text | Headings |
+| `--color-text-muted` | `#6F6467` | 5.7:1 | Captions, timestamps, meta | Anything load-bearing |
+| `--color-brand` | `#8C1330` | 9.3:1 | Links, active nav, footer band, section-heading rules | Large fills; any surface carrying body text |
+| `--color-brand-hover` | `#6E0E26` | 12.4:1 | Link and nav hover | |
+| `--color-brand-tint` | `#FBF1F3` | — | Quiet crimson pills, table header bands | Large areas |
+| `--color-accent` | `#0B7A3F` | 5.4:1 white-on-fill | **LINE button fill only** | Anything that is not the LINE handoff |
+| `--color-accent-tint` | `#E8F5EC` | — | LINE-related pills, community band background | Large areas |
+| `--color-accent-ink` | `#075C2F` | 7.3:1 on tint | Text on `--color-accent-tint` | Text on white |
+| `--color-border` | `#E2DAD8` | — | Hairlines, card borders | |
+| `--color-seal-gold` | `#F0CA3C` | 1.7:1 — fails | **Inside the seal artwork only** | Text, buttons, icons, any UI surface |
+
+Rules:
+
+- **Crimson is navigation and identity.** It comes out of the seal, so it is the one color allowed to
+  echo the mark. Links, active nav, the footer band, the rule under a section heading.
+- **Green appears only on the LINE handoff.** If green shows up on a generic button it has lost its
+  meaning. Never place body text directly on `--color-accent`; use `--color-accent-tint` with
+  `--color-accent-ink`.
+- **Gold never leaves the seal.** `#F0CA3C` on white is 1.7:1. It is legible only on the crimson
+  field inside the artwork, and there is no UI role for it.
+- **Three hues, total.** Crimson, one green, warm neutrals. Do not add a blue: a navy or link-blue
+  beside the crimson seal reads as two organizations sharing a header.
+
+**Contrast is a hard gate, not a preference.** Thai government web guidance holds public-sector sites
+to WCAG 2.0 AA, and §10 of SPEC.md already gates on Lighthouse Accessibility ≥ 95. Every value above
+is chosen to clear 4.5:1 for normal text. Two traps this palette exists to avoid: LINE's own brand
+green `#06C755` is **2.3:1** with white and the previously specified `#17A66B` is **3.13:1** — both
+fail AA as a button fill with a white label, on the site's primary call to action.
+
+All values live in `settings.theme` and render as CSS custom properties on `<html>`, so the admin can
+retune them without a rebuild. Every component reads the variables — no hard-coded hex anywhere in a
+component.
 
 Radius: `8px` cards and images, `6px` buttons and pills. Borders `1px solid var(--color-border)`.
 No drop shadows on cards; separation comes from the border and the surface tint. Container max-width
@@ -88,37 +112,64 @@ look deliberate.
 
 ## Brand assets
 
-Source of truth: `https://dashboard.cida.dpdns.org/cida-logo.png`.
+The mark is the official seal of **ทัณฑสถานบำบัดพิเศษกลาง** — outer ring
+`ทัณฑสถานบำบัดพิเศษกลาง`, lower ring `กรมราชทัณฑ์ กระทรวงยุติธรรม`, centre พระยมทรงสิงห์ in flames.
+Crimson field, gold artwork, black rings, white ground.
 
-Download it into `public/brand/` and the media library on first use. **Do not hotlink it in
-production** — that host sits outside this deployment and outside Cloudflare's cache, so a hotlink
-makes every page load depend on a server nobody is monitoring for this site.
+Because it is a เครื่องหมายราชการ, it is reproduced exactly: never recolored, never redrawn, never
+placed on a tinted panel, never cropped, and never stretched. If a treatment needs the mark to change,
+the treatment is wrong.
 
-Verify before phase 7, and report the answers rather than working around them:
+Source of truth: `public/brand/cida-logo.png`, committed to this repo and registered in the media
+library. **Do not hotlink** `dashboard.cida.dpdns.org` in production — that host sits outside this
+deployment and outside Cloudflare's cache, so a hotlink makes every page load depend on a server
+nobody is monitoring for this site.
 
-- **Width ≥ 1024px?** If yes it covers every derivative below. If it is closer to 400px, the header
-  lockup and the OG image will both look soft, and a vector master is needed.
-- **Transparent background?** The logo has to sit on white (header) and on a dark surface (footer).
-  If a single file doesn't work on both, produce a light and a dark variant, not a white box.
-- **Trimmed?** Strip any baked-in padding so the header can control its own spacing.
-- **Clean edges?** If it was exported from a screenshot or a JPEG, the halo will be visible at 2×.
+### A seal is not a header logo
+
+This is the constraint that governs every derivative below. The mark carries two concentric rings of
+Thai microtext. At the ≤120px header size those rings become grey noise, and at 16px the whole seal
+is a maroon dot. Two consequences:
+
+- **The header uses a lockup, not a scaled seal**: the mark at a legible size beside the institution
+  name typeset separately in Anuphan. The name is live text, not part of the image.
+- **The favicon and the maskable icon need a simplified mark** drawn on purpose — the central figure
+  or a crimson/gold monogram — not a downscale of the full seal.
+
+### Still unverified — blocked on the file
+
+The PNG has not been measured. It reached this session as a pasted image, which carries no file, and
+the original host is blocked by egress policy. These three answers require the actual bytes and must
+not be guessed:
+
+| Check | Why it matters | Status |
+|---|---|---|
+| Width ≥ 1024px? | Below ~1024 the lockup and the 1200×630 OG image both look soft and a vector master is required | **Unknown** |
+| Alpha channel? | The mark sits on white in the header and on a crimson band in the footer. A baked white box fails the second | **Unknown** — corners render white, but white ≠ transparent |
+| Clean edges? | A seal re-exported through JPEG carries a halo that is obvious at 2× against white | **Unknown** |
+| Baked padding? | The header must control its own spacing | Appears tight — outer ring runs to ~1–2% of the edge |
+
+Run `inspect_logo.py` against the committed file before phase 7 and record the results here.
+
+**Request an SVG master regardless of the PNG's size.** Print, signage, and the simplified favicon
+mark all need one, and a vector removes the derivative-quality question permanently. For an official
+seal there is almost certainly an authoritative vector held by the institution — ask for it rather
+than tracing the raster.
 
 Derivatives to generate from the master (script this, don't hand-export):
 
 | Output | Size | Use |
 |---|---|---|
-| `logo.svg` or `logo@2x.png` | ≥600px wide | Header lockup, rendered at ≤120px |
-| `favicon.ico` | 16 / 32 / 48 | Browser tab |
+| `logo-lockup.svg` | seal ≥600px wide + typeset name | Header, rendered at ≤120px tall |
+| `seal.svg` / `seal@2x.png` | ≥600px | Standalone mark, About page, documents |
+| `favicon.ico` | 16 / 32 / 48 | Browser tab — **simplified mark** |
 | `apple-touch-icon.png` | 180×180 | iOS home screen |
 | `icon-192.png`, `icon-512.png` | as named | PWA manifest |
 | `icon-maskable-512.png` | 512×512, 20% safe padding | Android adaptive icon |
-| `og-default.png` | 1200×630 | Social and LINE link previews |
+| `og-default.png` | 1200×630 | Social and LINE link previews — seal **plus** the institution name; the seal alone is unreadable in a chat thumbnail |
 
 The LINE link preview matters more than usual here — it is the image people see when the OA link gets
 forwarded, which is the site's main distribution path.
-
-An SVG master is still worth requesting even if the PNG is large enough. Print, signage, and any
-future hero treatment will need it, and it removes the whole derivative-quality question permanently.
 
 ## Typography
 Font pair: **Anuphan** as the primary face (Thai + Latin, modern humanist sans, self-hosted woff2),
@@ -149,18 +200,24 @@ Thai-specific rules — these are correctness, not preference:
 - Buttons and pills need extra vertical padding versus a Latin equivalent so tall diacritics don't
   touch the border. Minimum `10px` top/bottom on a 12–14px label.
 
-### Other locales
+### Other locales — deferred, not deleted
 
-The site runs in Thai, English, and Simplified Chinese.
+**v1 ships Thai only.** The `*_i18n` tables are still built in phase 1 exactly as SPEC.md §6
+specifies, and `locales` still carries `is_enabled`; adding a language stays a row insert. What v1
+does not ship is public English or Chinese routes, because serving three hreflang'd URLs of identical
+Thai text is worse for SEO than serving one, and no translator has been assigned (SPEC.md §14.5).
 
-- English uses **Inter** at the same scale, with `line-height` dropping to `1.7` for body — Thai's
-  `1.8` looks loose set in Latin.
-- Simplified Chinese uses a **system CJK stack** (`"PingFang SC", "Noto Sans SC", "Microsoft YaHei",
-  sans-serif`), not Anuphan, which has no CJK coverage. Body `line-height: 1.9`, and `letter-spacing:
-  0.02em` — the one place tracking is allowed.
+Keep the following so the layouts are already safe when a locale is switched on:
+
 - **Every layout must survive text expansion.** English strings run 15–30% longer than Thai; Chinese
   runs shorter but taller. No fixed-width buttons, no single-line assumptions on headings, no
-  truncation that hides meaning. Test each locale at 360px.
+  truncation that hides meaning. Test at 360px.
+- English will use **Inter** at the same scale, with body `line-height` dropping to `1.7` — Thai's
+  `1.8` looks loose set in Latin.
+- Chinese will use a **system CJK stack** (`"PingFang SC", "Noto Sans SC", "Microsoft YaHei",
+  sans-serif`), not Anuphan, which has no CJK coverage. Body `line-height: 1.9`, `letter-spacing:
+  0.02em` — the one place tracking is allowed.
+- `lang` and `dir` set per locale from day one, even with one locale enabled.
 
 ---
 

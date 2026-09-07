@@ -68,4 +68,48 @@ upload, originals over the threshold are dropped, and the admin dashboard shows 
 
 ## Learned
 
-_(empty — append as we go)_
+**Phase 0**
+
+- **`next build` copies `.env` into `.next/standalone/.env`,** and the standalone server loads it
+  from there. Two consequences. First, a CI image built on a checkout that has a `.env` ships those
+  secrets inside the image — §11 builds in CI and pulls on the VPS, so make the CI job assert `.env`
+  is absent before `pnpm build`. Second, it makes local fail-fast testing lie: the server picks up
+  the baked file even when the variable is unset in the environment. Delete `.env` and rebuild
+  before testing env validation.
+- **Next catches a throw from `instrumentation.register()`** and keeps the process alive serving
+  500s — the container stays "running", so `restart: unless-stopped` never fires and the only
+  symptom is a dead site. `src/instrumentation.ts` therefore logs and calls `process.exit(1)`
+  instead of letting the error propagate.
+- **Tailwind v4 `@theme` is the right home for the DESIGN.md tokens.** Utilities compile to
+  `var(--color-*)`, so phase 6 can override the custom properties on `<html>` from `settings.theme`
+  and the whole site retunes with no rebuild. Nothing in `globals.css` needs to change for that.
+- `eslint-config-next` 15 is still eslintrc-shaped; the flat config goes through `FlatCompat` from
+  `@eslint/eslintrc`. Keep `eslint` on 9.x — `eslint-config-next` 15 does not declare support for 10.
+- Prettier does not touch `docs/` or any `*.md`. SPEC.md and DESIGN.md are authoritative,
+  hand-aligned prose and tables; reflowing them churns the diff and breaks the table columns.
+- Pinned exact versions everywhere, no ranges. The box is rebuilt rarely and debugged remotely, so
+  a silent minor bump months from now is a bad trade for freshness.
+
+**Phase 1**
+
+- **`settings` uses a `'*'` sentinel for locale, not NULL.** §6 specifies `PK(key, locale)` with
+  "locale NULL = applies to all locales", which cannot exist — Postgres forces every primary-key
+  column NOT NULL. The sentinel keeps the PK real and lookups a plain equality; a nullable column
+  under a unique index would also have let duplicate global rows through, since NULL never equals
+  NULL. `GLOBAL_LOCALE` in `src/db/schema/settings.ts` is the only place that spells it.
+- **uuid v7 is generated application-side.** PG16 has no `uuidv7()` (PG18 added it) and
+  `pg_uuidv7` is not in `postgres:16-alpine`. `primaryId()` in `src/db/schema/shared.ts` is the
+  single place that decides, so a future PG upgrade is one edit.
+- **Every `*_i18n.locale` is a real FK to `locales.code`.** That is what makes "adding a language is
+  a row insert" true rather than aspirational — an unknown locale is rejected by the database.
+- **The seed is idempotent by hard-deleting `is_seed` rows first,** not by upserting. Children
+  cascade from their parents, so only `posts`, `products` and `categories` need deleting. Verified
+  clean across three consecutive runs with identical counts and zero orphans.
+- **`locales` rows are deliberately not seed-flagged.** They are configuration, not sample content;
+  the admin's "purge seed data" button must never remove the site's languages.
+- **No `revisions` table** — SPEC §14 decision 12. `audit_log` is the history.
+- Seeded products carry **no media rows**. The sharp pipeline is phase 3, and rows pointing at files
+  that do not exist would make the media library lie. It also means the "no photograph yet" empty
+  state (docs/DESIGN.md) is exercised from day one, which is the state that will ship longest.
+- Local Postgres 16.13 is installed on this box, so phases can be verified without Docker:
+  `initdb -D /tmp/pgdata -U cida --auth=trust` then `pg_ctl -D /tmp/pgdata -o '-p 5432 -k /tmp' start`.

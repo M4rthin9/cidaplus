@@ -61,7 +61,8 @@ Consequences you must design around:
 
 ## 3. Technology stack
 
-**[DECIDE]** — this is the recommended stack. Confirm or substitute before starting.
+Confirmed 2026-09-07 (§14 decisions 9 and 11). The only remaining **[DECIDE]** in this table is the
+SMTP provider, which is not needed to boot (§11).
 
 | Layer | Choice | Why |
 |---|---|---|
@@ -71,9 +72,9 @@ Consequences you must design around:
 | Admin UI | shadcn/ui + TanStack Table + dnd-kit (reordering) | |
 | Database | **PostgreSQL 16** in Docker | |
 | ORM | **Drizzle ORM** + drizzle-kit migrations | Lightweight, SQL-first, easy to review the generated schema. |
-| Auth | **Auth.js v5** (credentials provider) or **better-auth**, sessions in Postgres | Admin-only. Argon2id password hashing. |
+| Auth | **Auth.js v5**, credentials provider, sessions in Postgres | Admin-only. Argon2id password hashing. Confirmed — see §14 decision 11. |
 | Media | Local volume + **sharp** derivative pipeline, served through Next `/api/media` or directly by Caddy | Avoids the RAM cost of MinIO. Add MinIO later only if you outgrow the disk. |
-| i18n | **next-intl** with `/[locale]` routing, three locales | Thai default, English and Simplified Chinese. Translations come from the DB, not JSON message files, for anything content-shaped. |
+| i18n | **next-intl**, DB-backed messages | Thai only in v1 (§14 decision 9). The `*_i18n` tables and `locales.is_enabled` still ship in phase 1, so enabling a locale stays a row insert. Translations come from the DB, not JSON message files, for anything content-shaped. |
 | Rich text | **Tiptap** → stored as JSON, rendered server-side | Never store raw HTML from the editor. |
 | Validation | **Zod** schemas shared between server actions and forms | |
 | Reverse proxy | **Caddy 2** — automatic Let's Encrypt TLS, HTTP/3, compression | One-line TLS. Nginx is fine if you prefer, but then wire up certbot. |
@@ -291,8 +292,9 @@ The operator is a non-technical Thai staff member. Optimize for that.
 
 - **Thai-first UI.** Every admin label, button, toast, validation message, and empty state is in Thai.
   Latin only for values the operator types. `[DECIDE]` if you also want an EN admin toggle.
-- **Never lose work.** Autosave drafts to `localStorage` every 5s while editing, warn on navigate-away
-  with unsaved changes, and keep the last 10 revisions per product/post with one-click restore.
+- **Never lose work.** Autosave drafts to `localStorage` every 5s while editing and warn on
+  navigate-away with unsaved changes. ~~Keep the last 10 revisions per product/post with one-click
+  restore~~ — superseded by §14 decision 12: `audit_log` holds the field-level history instead.
 - **Images are the hard part.** The media picker must support drag-and-drop upload, multi-select,
   paste-from-clipboard, crop to the required aspect ratio (3:4 for products, 16:9 for post covers)
   before saving, and enforce `alt_th` before publish. Auto-generate AVIF + WebP + JPEG fallback at
@@ -465,24 +467,38 @@ Answered — treat these as settled, not as open questions.
 | 5 | SMTP provider **to be supplied later**. Build the contact form so it works without it (§9). |
 | 6 | Real product photography **arriving later**. Use placeholders, surface a missing-photo report, and don't build layouts that only look right with perfect images. |
 | 7 | "No Inter Bandwidth" confirmed as the hosting provider's term for international transit not being guaranteed. Cloudflare absorbs this for cached assets; keep origin payloads small anyway. |
+| 8 | **The site belongs to ทัณฑสถานบำบัดพิเศษกลาง** (กรมราชทัณฑ์, กระทรวงยุติธรรม) and use of the seal is authorized. It is an official institutional site, not a shop: the affiliation is visible above the fold, and the care-nation.com reference contributes section rhythm only. Settled 2026-09-07. |
+| 9 | **v1 ships Thai only.** The `*_i18n` tables, the `locales` table and `is_enabled` are still built in phase 1 exactly as §6 specifies — adding a language stays a row insert — but no English or Chinese public routes ship until a translator is assigned. This retires §14.4 and defers §14.5. Settled 2026-09-07. |
+| 10 | **The palette is rebuilt around the seal.** Crimson `#8C1330`, LINE green `#0B7A3F`, warm neutrals; no blue anywhere. The previous navy `#10294B` / green `#17A66B` were chosen before the logo existed and clash with it, and `#17A66B` fails WCAG AA (3.13:1) as a button fill with a white label. See `docs/DESIGN.md`. Settled 2026-09-07. |
+| 11 | **Auth is Auth.js v5**, credentials provider, sessions in Postgres, Argon2id hashing. This closes the last `[DECIDE]` that blocked phase 0. Settled 2026-09-07. |
+| 12 | **No `revisions` table.** §9's "last 10 revisions with one-click restore" is dropped: `audit_log` already stores a field-level diff on every mutation, and localStorage autosave covers in-progress loss. Restore-from-audit can be added later without a schema change. Settled 2026-09-07. |
 
 ### Still open — ask before the phase that needs them
 
-1. **Logo master dimensions.** Check the width of `cida-logo.png`. If it is under ~1024px, the header
-   lockup and the 1200×630 OG image will both look soft, and an SVG or larger raster is needed before
-   phase 7. Report the actual size rather than scaling up and hoping.
-2. **Brand color check.** The palette in `docs/DESIGN.md` was chosen before the logo was available.
-   Sample the logo's actual colors and confirm the navy and green sit with it. If the logo carries a
-   different blue, change the **tokens** to match the logo — never leave two blues on one page.
+1. **Logo master dimensions, alpha channel, and edge quality.** *Blocked on the file, not on a
+   decision.* `dashboard.cida.dpdns.org` is denied by this environment's egress policy, and a pasted
+   image carries no file. Commit the PNG to `public/brand/cida-logo.png` and the three checks in
+   `docs/DESIGN.md` → "Still unverified" can be answered in one command. Needed before phase 7.
+   **Also request the authoritative SVG** — for an official seal one almost certainly exists, and it
+   removes the derivative-quality question permanently.
 
-3. **Relationship to the existing CIDA platform.** The logo comes from a CIDA dashboard host, so this
-   site is presumably part of the same family. If it shares an audience or a maintainer with that
-   platform, two questions follow: should the visual identity match it deliberately, and is a second
-   stack (Next.js + Postgres here, versus what that platform runs) a cost worth paying? Both are
-   cheap to decide now and expensive to reverse after phase 4.
-4. **Chinese locale scope.** Simplified Chinese assumed. Confirm it's Simplified rather than
-   Traditional, and confirm who is writing the copy — English and Chinese content is a translation
-   commitment on every future product, not a one-time task.
-5. **Who translates.** Seed data ships Thai-only on purpose. Nobody should machine-translate product
-   names into English or Chinese without a human sign-off; decide who that is.
-6. SMTP provider, when chosen.
+2. **Who writes English and Chinese, if either is ever switched on.** Deferred with decision 9, not
+   resolved. Nobody should machine-translate product names without a human sign-off; decide who that
+   is before `locales.is_enabled` is flipped on anything.
+
+3. **SMTP provider, when chosen.** Phase 7. The contact form must work without it (§9).
+
+4. **EN admin toggle — §9 `[DECIDE]`.** All admin copy is Thai. Whether an English admin toggle is
+   also wanted affects phase 2. Assume no unless told otherwise.
+
+### Raised by the seal, not yet in any phase
+
+- **Does the site need to state its affiliation formally** — a link to the กรมราชทัณฑ์ parent site, a
+  ministry footer credit, or a specific official disclaimer? Official Thai institutional sites
+  normally carry one, and it is cheaper to design the footer around it now than to retrofit.
+- **Is a LINE Official Account acceptable as the sole enquiry channel for a public-sector body,** or
+  does a government telephone number and postal address need equal prominence? §8 currently makes
+  LINE the only CTA.
+- **WCAG 2.0 AA is effectively mandatory** for Thai public-sector sites, which turns §10's Lighthouse
+  Accessibility ≥ 95 from a target into a compliance floor. The palette in `docs/DESIGN.md` now
+  clears it; keep every future token above 4.5:1 for normal text.
