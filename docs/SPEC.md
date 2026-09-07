@@ -477,12 +477,12 @@ Answered — treat these as settled, not as open questions.
 
 ### Still open — ask before the phase that needs them
 
-1. **Logo master dimensions, alpha channel, and edge quality.** *Blocked on the file, not on a
-   decision.* `dashboard.cida.dpdns.org` is denied by this environment's egress policy, and a pasted
-   image carries no file. Commit the PNG to `public/brand/cida-logo.png` and the three checks in
-   `docs/DESIGN.md` → "Still unverified" can be answered in one command. Needed before phase 7.
-   **Also request the authoritative SVG** — for an official seal one almost certainly exists, and it
-   removes the derivative-quality question permanently.
+1. ~~**Logo master dimensions, alpha channel, and edge quality.**~~ **Answered 2026-09-07.**
+   The file is committed at `public/brand/cida-logo.png`: **5906 × 5906px**, RGBA with real
+   transparency, 37px (0.6%) of trimmable margin, clean anti-aliased edges, 7.5 MB. Measured
+   colours corrected the palette — see `docs/DESIGN.md` → "Verified". An authoritative **SVG master
+   is still worth requesting** for print, signage and the simplified favicon mark, but nothing is
+   blocked on it.
 
 2. **Who writes English and Chinese, if either is ever switched on.** Deferred with decision 9, not
    resolved. Nobody should machine-translate product names without a human sign-off; decide who that

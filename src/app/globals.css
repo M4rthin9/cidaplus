@@ -20,9 +20,9 @@
   --color-text: #574e50;
   --color-text-muted: #6f6467;
 
-  --color-brand: #8c1330;
-  --color-brand-hover: #6e0e26;
-  --color-brand-tint: #fbf1f3;
+  --color-brand: #880924;
+  --color-brand-hover: #6d071d;
+  --color-brand-tint: #f8f0f2;
 
   --color-accent: #0b7a3f;
   --color-accent-tint: #e8f5ec;
@@ -30,8 +30,8 @@
 
   --color-border: #e2dad8;
 
-  /* Lives inside the seal artwork only — 1.6:1 on white. Never text, never a surface. */
-  --color-seal-gold: #f0ca3c;
+  /* Lives inside the seal artwork only — 1.5:1 on white. Never text, never a surface. */
+  --color-seal-gold: #edd357;
 
   --radius-card: 8px;
   --radius-control: 6px;
