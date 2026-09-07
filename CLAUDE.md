@@ -113,6 +113,8 @@ upload, originals over the threshold are dropped, and the admin dashboard shows 
   state (docs/DESIGN.md) is exercised from day one, which is the state that will ship longest.
 - Local Postgres 16.13 is installed on this box, so phases can be verified without Docker:
   `initdb -D /tmp/pgdata -U cida --auth=trust` then `pg_ctl -D /tmp/pgdata -o '-p 5432 -k /tmp' start`.
+  After a container restart the data directory survives but the server does not — check for
+  `/tmp/pgdata/base` and only run `pg_ctl start`. Re-running `initdb` would wipe the cluster.
 
 **Phase 2**
 
