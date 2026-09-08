@@ -72,7 +72,7 @@ SMTP provider, which is not needed to boot (§11).
 | Admin UI | shadcn/ui + TanStack Table + dnd-kit (reordering) | |
 | Database | **PostgreSQL 16** in Docker | |
 | ORM | **Drizzle ORM** + drizzle-kit migrations | Lightweight, SQL-first, easy to review the generated schema. |
-| Auth | **Auth.js v5**, credentials provider, sessions in Postgres | Admin-only. Argon2id password hashing. Confirmed — see §14 decision 11. |
+| Auth | **Auth.js v5**, credentials provider, **JWT sessions** | Admin-only. Argon2id password hashing. Auth.js refuses database sessions with credentials — see §14 decisions 11 and 13. |
 | Media | Local volume + **sharp** derivative pipeline, served through Next `/api/media` or directly by Caddy | Avoids the RAM cost of MinIO. Add MinIO later only if you outgrow the disk. |
 | i18n | **next-intl**, DB-backed messages | Thai only in v1 (§14 decision 9). The `*_i18n` tables and `locales.is_enabled` still ship in phase 1, so enabling a locale stays a row insert. Translations come from the DB, not JSON message files, for anything content-shaped. |
 | Rich text | **Tiptap** → stored as JSON, rendered server-side | Never store raw HTML from the editor. |
@@ -472,15 +472,19 @@ Answered — treat these as settled, not as open questions.
 | 10 | **The palette is rebuilt around the seal.** Crimson `#8C1330`, LINE green `#0B7A3F`, warm neutrals; no blue anywhere. The previous navy `#10294B` / green `#17A66B` were chosen before the logo existed and clash with it, and `#17A66B` fails WCAG AA (3.13:1) as a button fill with a white label. See `docs/DESIGN.md`. Settled 2026-09-07. |
 | 11 | **Auth is Auth.js v5**, credentials provider, sessions in Postgres, Argon2id hashing. This closes the last `[DECIDE]` that blocked phase 0. Settled 2026-09-07. |
 | 12 | **No `revisions` table.** §9's "last 10 revisions with one-click restore" is dropped: `audit_log` already stores a field-level diff on every mutation, and localStorage autosave covers in-progress loss. Restore-from-audit can be added later without a schema change. Settled 2026-09-07. |
+| 13 | **Sessions are JWT, not Postgres rows.** `@auth/core` asserts "Signing in with credentials only supported if JWT strategy is enabled", so §3's original wording was not buildable. Revocation — the capability database sessions were wanted for — is recovered by `users.session_version`: deactivating a user, changing a password, or changing a role bumps it, and `requireAdmin()` rejects any token minted before the bump. Settled 2026-09-07. |
+| 14 | **Login lockout is persisted on `users`,** not an in-memory counter. §13's "in-memory token bucket is fine" still governs *rate limiting* (one source, short burst); the per-account lockout is a different mechanism and lives in `failed_login_attempts` / `locked_until`, because an in-memory counter would reset on every deploy. 5 attempts, 15-minute lock. Settled 2026-09-07. |
+| 15 | **Media framing is non-destructive.** §9's "crop to the required aspect ratio before saving" cannot hold: `media` is a shared library and `product_media` is a join table, so one image can be a product photo and a post cover at once and a stored crop would lock it to one aspect forever. One derivative set is kept at the natural aspect; `media.focal_x` / `focal_y`, seeded by sharp's attention detector and editable in the admin, drive `object-fit: cover` at the consumer. Settled 2026-09-08. |
+| 16 | **Media is served at `/media/*`, not `/api/media/*`.** §3 offered either, but §11 tells Cloudflare to cache `/media/*` and to BYPASS cache on `/api/*` — serving from an `/api` path would have made every image uncacheable at the edge, on a host with no guaranteed international bandwidth. Caddy can take the same path over in phase 11 with no URL change. Settled 2026-09-08. |
 
 ### Still open — ask before the phase that needs them
 
-1. **Logo master dimensions, alpha channel, and edge quality.** *Blocked on the file, not on a
-   decision.* `dashboard.cida.dpdns.org` is denied by this environment's egress policy, and a pasted
-   image carries no file. Commit the PNG to `public/brand/cida-logo.png` and the three checks in
-   `docs/DESIGN.md` → "Still unverified" can be answered in one command. Needed before phase 7.
-   **Also request the authoritative SVG** — for an official seal one almost certainly exists, and it
-   removes the derivative-quality question permanently.
+1. ~~**Logo master dimensions, alpha channel, and edge quality.**~~ **Answered 2026-09-07.**
+   The file is committed at `public/brand/cida-logo.png`: **5906 × 5906px**, RGBA with real
+   transparency, 37px (0.6%) of trimmable margin, clean anti-aliased edges, 7.5 MB. Measured
+   colours corrected the palette — see `docs/DESIGN.md` → "Verified". An authoritative **SVG master
+   is still worth requesting** for print, signage and the simplified favicon mark, but nothing is
+   blocked on it.
 
 2. **Who writes English and Chinese, if either is ever switched on.** Deferred with decision 9, not
    resolved. Nobody should machine-translate product names without a human sign-off; decide who that

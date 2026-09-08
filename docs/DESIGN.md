@@ -52,14 +52,14 @@ crimson field, gold artwork, black rings — not chosen independently of it.
 | `--color-heading` | `#241C1E` | 16.7:1 | All headings, product names, prices | Body paragraphs. **Never crimson** — too loud at heading scale, and wrong beside wreaths |
 | `--color-text` | `#574E50` | 8.0:1 | Body text | Headings |
 | `--color-text-muted` | `#6F6467` | 5.7:1 | Captions, timestamps, meta | Anything load-bearing |
-| `--color-brand` | `#8C1330` | 9.3:1 | Links, active nav, footer band, section-heading rules | Large fills; any surface carrying body text |
-| `--color-brand-hover` | `#6E0E26` | 12.4:1 | Link and nav hover | |
-| `--color-brand-tint` | `#FBF1F3` | — | Quiet crimson pills, table header bands | Large areas |
+| `--color-brand` | `#880924` | 9.9:1 | Links, active nav, footer band, section-heading rules | Large fills; any surface carrying body text |
+| `--color-brand-hover` | `#6D071D` | 12.4:1 | Link and nav hover | |
+| `--color-brand-tint` | `#F8F0F2` | — | Quiet crimson pills, table header bands | Large areas |
 | `--color-accent` | `#0B7A3F` | 5.4:1 white-on-fill | **LINE button fill only** | Anything that is not the LINE handoff |
 | `--color-accent-tint` | `#E8F5EC` | — | LINE-related pills, community band background | Large areas |
 | `--color-accent-ink` | `#075C2F` | 7.3:1 on tint | Text on `--color-accent-tint` | Text on white |
 | `--color-border` | `#E2DAD8` | — | Hairlines, card borders | |
-| `--color-seal-gold` | `#F0CA3C` | 1.7:1 — fails | **Inside the seal artwork only** | Text, buttons, icons, any UI surface |
+| `--color-seal-gold` | `#EDD357` | 1.5:1 — fails | **Inside the seal artwork only** | Text, buttons, icons, any UI surface |
 
 Rules:
 
@@ -68,7 +68,7 @@ Rules:
 - **Green appears only on the LINE handoff.** If green shows up on a generic button it has lost its
   meaning. Never place body text directly on `--color-accent`; use `--color-accent-tint` with
   `--color-accent-ink`.
-- **Gold never leaves the seal.** `#F0CA3C` on white is 1.7:1. It is legible only on the crimson
+- **Gold never leaves the seal.** `#EDD357` on white is 1.5:1. It is legible only on the crimson
   field inside the artwork, and there is no UI role for it.
 - **Three hues, total.** Crimson, one green, warm neutrals. Do not add a blue: a navy or link-blue
   beside the crimson seal reads as two organizations sharing a header.
@@ -136,20 +136,33 @@ is a maroon dot. Two consequences:
 - **The favicon and the maskable icon need a simplified mark** drawn on purpose — the central figure
   or a crimson/gold monogram — not a downscale of the full seal.
 
-### Still unverified — blocked on the file
+### Verified — measured 2026-09-07
 
-The PNG has not been measured. It reached this session as a pasted image, which carries no file, and
-the original host is blocked by egress policy. These three answers require the actual bytes and must
-not be guessed:
+`public/brand/cida-logo.png` is in the repo and has been measured with
+`scripts/inspect-logo.py`. Every question DESIGN.md asked is answered:
 
-| Check | Why it matters | Status |
+| Check | Result |
+|---|---|
+| Width ≥ 1024px? | **5906 × 5906px**, exactly square. Comfortably covers every derivative below, including the 1200×630 OG image |
+| Alpha channel? | **Yes, real transparency** — RGBA, 23.6% of pixels non-opaque. The mark sits correctly on white and on a crimson footer band; no light/dark variant needed |
+| Trimmed? | **Effectively yes** — 37px of transparent margin on all four sides, 0.6% of the width. Strip it in the derivative script so the header controls its own spacing |
+| Clean edges? | Alpha runs the full 0–255 range, so edges are anti-aliased rather than hard-cut. No JPEG halo |
+| File size | 7.5 MB. A master, not something to serve — the derivative pipeline is not optional |
+
+Measured colours, by share of opaque pixels:
+
+| Hex | Share | Role |
 |---|---|---|
-| Width ≥ 1024px? | Below ~1024 the lockup and the 1200×630 OG image both look soft and a vector master is required | **Unknown** |
-| Alpha channel? | The mark sits on white in the header and on a crimson band in the footer. A baked white box fails the second | **Unknown** — corners render white, but white ≠ transparent |
-| Clean edges? | A seal re-exported through JPEG carries a halo that is obvious at 2× against white | **Unknown** |
-| Baked padding? | The header must control its own spacing | Appears tight — outer ring runs to ~1–2% of the edge |
+| `#000000` | 16.3% | Ring outlines and the Thai lettering |
+| `#880924` | 14.7% | **Field crimson — the source of `--color-brand`** |
+| `#EDD357` | 13.4% | **Bright gold — the source of `--color-seal-gold`** |
+| `#900A27` · `#9C082B` · `#A50C2E` | 28.4% | Field shading |
+| `#D4AA5F` | 6.8% | Gold shadow |
 
-Run `inspect_logo.py` against the committed file before phase 7 and record the results here.
+The palette tokens above were first set by eye from a screenshot; measuring moved
+crimson by ΔE76 5.8 and gold by 9.8 — both perceptible side by side, which is exactly
+the "two crimsons on one page" fault this file forbids. The table now carries the
+measured values.
 
 **Request an SVG master regardless of the PNG's size.** Print, signage, and the simplified favicon
 mark all need one, and a vector removes the derivative-quality question permanently. For an official

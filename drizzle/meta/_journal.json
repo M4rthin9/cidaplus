@@ -8,6 +8,20 @@
       "when": 1788768003224,
       "tag": "0000_yielding_nighthawk",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788768745281,
+      "tag": "0001_equal_molly_hayes",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788824522200,
+      "tag": "0002_bouncy_joseph",
+      "breakpoints": true
     }
   ]
 }
