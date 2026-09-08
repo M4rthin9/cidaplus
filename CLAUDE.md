@@ -251,3 +251,58 @@ upload, originals over the threshold are dropped, and the admin dashboard shows 
 - `settings.line` stores the OA **handle**, not a URL (§14 decision 20). Phase 8 derives both link
   forms from it.
 
+
+**Phase 7**
+
+- **Thai is served unprefixed, other locales prefixed** (`localePrefix: "as-needed"`, §14 decision
+  21). §5 says every public route is locale-prefixed, but `localePrefix()` in `src/lib/slug.ts` has
+  returned `""` for Thai since phase 4 and every stored 301 points at that shape. The lasting
+  benefit is that Thai URLs do not change on the day English is switched on.
+- **`localeDetection` is off.** With it on, next-intl reads Accept-Language and redirects a visitor
+  whose browser prefers English from `/` to `/en` — which `[locale]/layout.tsx` 404s, because `en`
+  is disabled. A Thai government site must not 404 for anyone with an English browser. Turn it on in
+  the same change that enables a second locale.
+- **Locale enablement is a database read, not a constant.** `routing.locales` lists the URL shapes;
+  `locales.is_enabled` decides which are live, checked in `[locale]/layout.tsx`. Verified both ways:
+  `/en/...` 404s while the row is off, and flipping one boolean makes the whole English tree serve
+  with Thai fallback content — no deploy, which is what §14 decision 9 promises.
+- **There are two root layouts** (§14 decision 22): `app/[locale]/layout.tsx` for the storefront and
+  `app/(admin)/layout.tsx` for the admin. A layout above a dynamic segment never receives that
+  segment's params, so a single shared root could not put the locale in `<html lang>` without
+  reading the request path and going dynamic on every page. Symptom before the split: `/en/...`
+  rendered `lang="th"`.
+- **React 19 resets an uncontrolled `<form action={…}>` once the action returns** — including when
+  it returns validation errors. On the contact form that wiped every field the visitor had typed,
+  on the one form whose whole purpose is not to lose an enquiry. The action now echoes the submitted
+  strings back in its state and each field renders them as `defaultValue`; the reset then restores
+  those instead of blanks. Verified by mistyping one field and correcting only that field.
+- **`next build` bakes `unstable_cache` values into prerendered pages, and `.next/cache` survives
+  between builds.** A settings row changed with raw SQL therefore does not appear even after a
+  rebuild and a restart — the tag was never invalidated. Editing through the admin is fine (the
+  action calls `revalidateTag`); when poking the database directly, `rm -rf .next` first.
+- **Read `headers()` only when it changes the answer.** `SiteHeader` needs the request path to build
+  the language switcher's per-locale hrefs, but reading it opts the route out of static rendering —
+  so the call sits behind `locales.length > 1` and never happens while Thai is the only locale. The
+  storefront's static routes stay `●` in the build output.
+- **Anuphan is a variable font.** Google serves one file per unicode subset covering the whole
+  100–700 weight axis, so 400/500/600 need two files, not six: `anuphan-thai.woff2` (19 KB) and
+  `anuphan-latin.woff2` (35 KB), each declared `font-weight: 100 700` so the browser interpolates
+  instead of synthesising a fake bold.
+- **The homepage's LCP element is the hero seal,** and it was being discovered only after the CSS
+  and HTML parsed — 819 ms of load delay on a 194 ms download. `Seal` with `priority` now emits a
+  `<link rel="preload" as="image" type="image/avif">`, which React 19 hoists into `<head>`. AVIF
+  only: a browser that cannot decode the type ignores the preload and falls through to the
+  `<picture>` chain.
+- **The site ships with no favicon on purpose,** so Lighthouse Best Practices is 96 rather than 100
+  on every page (one missing-resource audit). docs/DESIGN.md requires a *simplified mark drawn on
+  purpose* at icon sizes — the seal's two rings of Thai microtext are noise below ~96px and a maroon
+  dot at 16px — and downscaling it is the treatment that file forbids. Blocked on the SVG master;
+  phase 10 owns the icons.
+- **A `page.tsx` may only export a component and Next's route config.** Exporting a helper from one
+  fails the build; `unreadMessageCount` lives in `src/lib/admin/messages.ts`.
+- UI chrome lives in `messages/th.json`; everything a reader sees as content — product names, the
+  site name, the LINE button label, the PDPA note — stays in `*_i18n` and `settings`. A locale with
+  no catalog falls back to Thai, mirroring §6's rule for content.
+- Testing gotcha: matching `next-server` loosely against `/proc/*/cmdline` kills this agent's own
+  shell, because the shell's command line contains the string it is searching for. Anchor it:
+  `case "$c" in "next-server"*)`. Same failure mode as `pkill`, noted under phase 2.

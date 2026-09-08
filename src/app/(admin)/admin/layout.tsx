@@ -5,6 +5,7 @@ import { getAdminUser } from "@/lib/auth/session";
 import { signOut } from "@/lib/auth";
 import { LOGIN_PATH } from "@/lib/auth/config";
 import { Button } from "@/components/ui/field";
+import { unreadMessageCount } from "@/lib/admin/messages";
 
 export const metadata: Metadata = {
   title: { default: "ระบบจัดการเว็บไซต์", template: "%s — ระบบจัดการเว็บไซต์" },
@@ -12,7 +13,7 @@ export const metadata: Metadata = {
 };
 
 /** Every admin label is Thai (CLAUDE.md). Sections not yet built are not listed. */
-type NavItem = { href: string; label: string; ownerOnly?: boolean };
+type NavItem = { href: string; label: string; ownerOnly?: boolean; badge?: number };
 
 const NAV: readonly NavItem[] = [
   { href: "/admin", label: "ภาพรวม" },
@@ -20,6 +21,7 @@ const NAV: readonly NavItem[] = [
   { href: "/admin/products", label: "สินค้า" },
   { href: "/admin/posts", label: "ข่าวและกิจกรรม" },
   { href: "/admin/media", label: "คลังภาพ" },
+  { href: "/admin/messages", label: "กล่องข้อความ" },
   { href: "/admin/users", label: "ผู้ดูแลระบบ", ownerOnly: true },
   { href: "/admin/settings/general", label: "ตั้งค่า" },
   { href: "/admin/audit", label: "ประวัติการแก้ไข" },
@@ -34,7 +36,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     return <>{children}</>;
   }
 
-  const items = NAV.filter((item) => !item.ownerOnly || user.role === "owner");
+  const unread = await unreadMessageCount();
+  const items = NAV.filter((item) => !item.ownerOnly || user.role === "owner").map((item) =>
+    item.href === "/admin/messages" && unread > 0 ? { ...item, badge: unread } : item,
+  );
 
   return (
     <div className="min-h-screen bg-(--color-surface)">
@@ -53,6 +58,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
                 className="text-sm text-(--color-text) hover:text-(--color-brand)"
               >
                 {item.label}
+                {item.badge !== undefined && (
+                  <span className="ms-1.5 rounded-full bg-(--color-brand) px-1.5 py-0.5 text-xs text-white">
+                    {item.badge}
+                  </span>
+                )}
               </Link>
             ))}
           </nav>
