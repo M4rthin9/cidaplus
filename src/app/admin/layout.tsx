@@ -21,6 +21,7 @@ const NAV: readonly NavItem[] = [
   { href: "/admin/posts", label: "ข่าวและกิจกรรม" },
   { href: "/admin/media", label: "คลังภาพ" },
   { href: "/admin/users", label: "ผู้ดูแลระบบ", ownerOnly: true },
+  { href: "/admin/settings/general", label: "ตั้งค่า" },
   { href: "/admin/audit", label: "ประวัติการแก้ไข" },
 ];
 
