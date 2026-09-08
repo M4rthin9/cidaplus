@@ -229,3 +229,25 @@ upload, originals over the threshold are dropped, and the admin dashboard shows 
 - A link mark with an unsafe scheme drops the *mark*, keeping the text. Losing the words because the
   URL was bad would be worse than losing the link.
 
+**Phase 6**
+
+- **Two caches sit on the settings read and each earns its place.** `TtlCache` (60s, §6) keeps one
+  server process off the database on every render; Next's tagged cache lets public pages stay
+  statically rendered. A write does both — `bustSetting(key)` then
+  `revalidateTag(SETTINGS_TAG)` — and skipping either leaves a stale colour on the site.
+- **A settings read never throws.** §6 requires a missing row to fall back to its default; the same
+  applies to an unreachable database, so `getSetting` catches and returns defaults. That is also what
+  lets `next build` prerender without a database, which §11's build-in-CI-and-pull flow needs.
+- **A key stores its structural half at `'*'` and its copy per locale, merged on read** (§14 decision
+  19). Verified in the database: `line` is two rows, `{oaId}` at `*` and
+  `{buttonLabel, messageTemplate}` at `th`, with nothing duplicated.
+- **Theme reaches the site as a React `style` object on `<html>`,** not a CSS string — the values are
+  operator input, and this keeps them out of `dangerouslySetInnerHTML` territory entirely. Tailwind
+  v4 compiles every utility to `var(--color-*)`, so nothing in `globals.css` changes.
+- The theme editor shows **live WCAG contrast ratios** for the pairs that carry text and warns when
+  any falls below 4.5:1, because Thai public-sector guidance makes AA a compliance floor rather than
+  a target. It warns rather than blocks — the operator may have a reason, and a hard block on a
+  colour picker is the kind of thing people work around by editing the database.
+- `settings.line` stores the OA **handle**, not a URL (§14 decision 20). Phase 8 derives both link
+  forms from it.
+

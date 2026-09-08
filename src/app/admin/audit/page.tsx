@@ -27,6 +27,7 @@ const ENTITY_LABEL: Record<string, string> = {
   categories: "หมวดหมู่",
   products: "สินค้า",
   posts: "ข่าวและกิจกรรม",
+  settings: "ตั้งค่า",
 };
 
 export default async function AuditPage() {
