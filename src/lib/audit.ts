@@ -56,6 +56,8 @@ export type AuditAction =
   | "restore"
   /** Hard delete, files included. Distinct from "delete", which is reversible. */
   | "purge"
+  /** Sort order changed for a set of rows; entityId is null. */
+  | "reorder"
   | "login.success"
   | "login.failure"
   | "login.locked"

@@ -178,3 +178,29 @@ upload, originals over the threshold are dropped, and the admin dashboard shows 
 - `/proc/<pid>/comm` truncates to 15 chars, so `next-server (v15.5.25)` reads as `next-server (v1`.
   Match on `/proc/<pid>/cmdline` when hunting a stray dev server — and never `pkill`.
 
+**Phase 4**
+
+- **`z.string().optional().or(z.literal("").transform(() => undefined))` does not turn "" into
+  undefined.** The empty string satisfies the *first* branch, so the union never reaches the
+  transform and "" is written verbatim — which for a nullable foreign key is a constraint violation,
+  not a null. This 500'd category creation. Use `z.preprocess` to strip "" before validation;
+  `optionalString()` in `src/lib/validation/catalog.ts` is the one place that does it. `env.ts`
+  escapes the bug only because its first branch carries `.min(1)`, so "" fails it.
+- **Slugs are Thai UTF-8** (§14 decision 17). `slugify` keeps the Thai block and ASCII
+  alphanumerics; U+200B is a *word boundary* in Thai (no spaces between words) so it becomes a
+  hyphen, while ZWNJ/ZWJ/BOM are stripped as invisible.
+- **A 301 is only written when the entity was already published** — an unpublished draft has no
+  public URL to redirect from. `recordSlugRedirect` also re-points existing rows at the new target
+  so a rename chain stays one hop, and deletes any row that would redirect to itself.
+- **dnd-kit ships English screen-reader announcements that read out raw UUIDs.** Every admin-facing
+  string is Thai, and a screen reader is admin-facing, so `DndContext` gets Thai `announcements` and
+  `screenReaderInstructions` built from the category names.
+- Testing gotcha: dnd-kit keyboard sorting needs a beat between key presses. Space → ArrowDown →
+  Space fired back-to-back silently does nothing; ~400ms between them works. Mouse drag needs
+  intermediate `mouse.move` steps to clear the 4px activation constraint.
+- `products.sort_order` is ordered **within a category**, since products are listed per category.
+  New products sort last.
+- Server actions called from a client component inside `startTransition` do refresh the RSC payload,
+  so `revalidatePath` updates props with no manual reload — verified by a bulk unpublish changing
+  the table's state column in place.
+
