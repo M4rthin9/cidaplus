@@ -146,3 +146,35 @@ upload, originals over the threshold are dropped, and the admin dashboard shows 
   response time cannot enumerate accounts.
 - Do not use `pkill` in this session — it kills the agent's own shell.
 
+**Phase 3**
+
+- **AVIF encoder effort is the single most expensive number in the pipeline.** Measured here on one
+  1600px rendition: effort 4 = 10 978 ms / 117 KB, effort 2 = 1 689 ms / 125 KB, effort 0 = 369 ms /
+  200 KB. `AVIF_EFFORT = 2`. Effort 4 costs 6.5x the time for 7% smaller files inside a Server
+  Action on a 4-core VPS shared with Postgres.
+- **Derive everything from the capped master, never from a full-size intermediate.** Holding an
+  uncompressed full-size buffer cost 21s and ~100 MB on the 5906x5906 seal; decoding once into the
+  2400px master and deriving from that is 6.7s. `MASTER_MAX_WIDTH` must stay >= the largest
+  derivative width or this silently starts upscaling.
+- **Next caps Server Action bodies at 1 MB by default,** which silently swallowed every real photo
+  upload — §13's 10 MB limit was unreachable. `serverActions.bodySizeLimit` is now 24mb, and the
+  upload form refuses an oversized batch client-side, because Next rejects the body before any of
+  our code runs so the failure would otherwise be invisible.
+- **`sharp.format.avif` is absent; AVIF lives under `sharp.format.heif` with an `avif` alias.**
+  Checking the former says AVIF is unsupported when it works fine.
+- **sharp reports the focal point as `attentionX` / `attentionY` in source pixels.** `cropOffsetLeft`
+  is in output space and negative — it is not the field you want.
+- **Split client-safe URL helpers from filesystem code.** `node:path` / `node:crypto` in a module a
+  client component imports fails the webpack build. `src/lib/media/urls.ts` is pure and importable
+  anywhere; `storage.ts` carries `import "server-only"` so the boundary is enforced. Vitest aliases
+  `server-only` to `test/server-only-stub.ts`, since it throws by design outside a Server Component.
+- **`output: "standalone"` does not copy `.next/static` or `public/`.** Both must be copied beside
+  `server.js` or every asset 404s and the app runs unhydrated. Phase 11's deploy script must do this.
+- Testing gotcha: the admin layout's sign-out button precedes page content in the DOM, so a bare
+  `button[type="submit"]` selector clicks *sign out*. Scope form clicks, e.g.
+  `form:has(#files) button[type="submit"]`.
+- Playwright 1.57 expects Chromium build 1200; this image ships 1194 at
+  `/opt/pw-browsers/chromium-1194/chrome-linux/chrome`. Launch with an explicit `executablePath`.
+- `/proc/<pid>/comm` truncates to 15 chars, so `next-server (v15.5.25)` reads as `next-server (v1`.
+  Match on `/proc/<pid>/cmdline` when hunting a stray dev server — and never `pkill`.
+

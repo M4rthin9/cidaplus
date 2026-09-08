@@ -10,8 +10,9 @@ const THAI_DATE = new Intl.DateTimeFormat("th-TH", { dateStyle: "medium", timeSt
 const ACTION_LABEL: Record<string, string> = {
   create: "เพิ่ม",
   update: "แก้ไข",
-  delete: "ปิดใช้งาน",
-  restore: "เปิดใช้งาน",
+  delete: "ลบ",
+  purge: "ลบถาวร",
+  restore: "กู้คืน",
   "login.success": "เข้าสู่ระบบสำเร็จ",
   "login.failure": "เข้าสู่ระบบไม่สำเร็จ",
   "login.locked": "ถูกระงับชั่วคราว",
@@ -21,6 +22,7 @@ const ACTION_LABEL: Record<string, string> = {
 const ENTITY_LABEL: Record<string, string> = {
   users: "ผู้ดูแลระบบ",
   auth: "การเข้าสู่ระบบ",
+  media: "คลังภาพ",
 };
 
 export default async function AuditPage() {

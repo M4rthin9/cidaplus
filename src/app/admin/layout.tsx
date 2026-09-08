@@ -16,6 +16,7 @@ type NavItem = { href: string; label: string; ownerOnly?: boolean };
 
 const NAV: readonly NavItem[] = [
   { href: "/admin", label: "ภาพรวม" },
+  { href: "/admin/media", label: "คลังภาพ" },
   { href: "/admin/users", label: "ผู้ดูแลระบบ", ownerOnly: true },
   { href: "/admin/audit", label: "ประวัติการแก้ไข" },
 ];

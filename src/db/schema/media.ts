@@ -1,4 +1,4 @@
-import { integer, pgTable, primaryKey, text, varchar } from "drizzle-orm/pg-core";
+import { boolean, integer, pgTable, primaryKey, text, varchar } from "drizzle-orm/pg-core";
 import { localeColumn } from "./locales";
 import { users } from "./users";
 import { primaryId, seedFlag, softDelete, timestamps } from "./shared";
@@ -17,6 +17,27 @@ export const media = pgTable("media", {
   bytes: integer("bytes").notNull(),
   tags: text("tags").array().notNull().default([]),
   blurhash: varchar("blurhash", { length: 128 }),
+
+  /**
+   * Focal point as whole percentages of the source image, seeded by sharp's
+   * attention detector and editable by the operator.
+   *
+   * §9 asked for a destructive crop to 3:4 / 16:9 "before saving", but `media`
+   * is a shared library — the same photograph can be a product image and a post
+   * cover at once, and a stored crop locks it to one aspect forever. Instead one
+   * derivative set is kept at the natural aspect and the consumer crops with
+   * object-fit: cover plus object-position built from these two numbers.
+   * SPEC.md §14 decision 15.
+   */
+  focalX: integer("focal_x").notNull().default(50),
+  focalY: integer("focal_y").notNull().default(50),
+
+  /**
+   * False when the upload exceeded the retention threshold and the original was
+   * dropped to save disk (SPEC.md §2). A capped master is always kept, so
+   * derivatives can be regenerated either way.
+   */
+  originalKept: boolean("original_kept").notNull().default(false),
   uploadedBy: varchar("uploaded_by", { length: 36 }).references(() => users.id, {
     onDelete: "set null",
   }),

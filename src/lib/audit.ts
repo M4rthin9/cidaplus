@@ -54,6 +54,8 @@ export type AuditAction =
   | "update"
   | "delete"
   | "restore"
+  /** Hard delete, files included. Distinct from "delete", which is reversible. */
+  | "purge"
   | "login.success"
   | "login.failure"
   | "login.locked"
