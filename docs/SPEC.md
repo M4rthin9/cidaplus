@@ -425,7 +425,7 @@ what to do when disk hits 80%, and how to read logs.
 | 2 | Auth, admin shell, users CRUD, audit log | Can log in, wrong password locks out after 5 tries |
 | 3 | Media library + sharp pipeline + picker component | Upload a 5 MB JPEG → AVIF/WebP derivatives + blurhash exist |
 | 4 | Categories + products admin CRUD, reorder, bulk actions | Full lifecycle on a product without a page refresh bug |
-| 5 | Posts (news/events) admin CRUD with Tiptap | |
+| 5 | Posts (news/events) admin CRUD with Tiptap | Full lifecycle on a post; a hostile body submitted through the real form is stored sanitised |
 | 6 | Settings registry: general, contact, line, theme, seo | Changing the accent color updates the public site with no rebuild |
 | 7 | Public storefront + `next-intl` locale routing + language switcher + contact form → inbox | Lighthouse targets met; switching locale on a product page lands on the same product; submitting the contact form with SMTP unset still creates a row |
 | 8 | LINE CTA everywhere + `/go/line` redirect + click tracking + dashboard chart | Click on a product CTA increments the counter and lands on the OA |
@@ -476,6 +476,8 @@ Answered — treat these as settled, not as open questions.
 | 14 | **Login lockout is persisted on `users`,** not an in-memory counter. §13's "in-memory token bucket is fine" still governs *rate limiting* (one source, short burst); the per-account lockout is a different mechanism and lives in `failed_login_attempts` / `locked_until`, because an in-memory counter would reset on every deploy. 5 attempts, 15-minute lock. Settled 2026-09-07. |
 | 15 | **Media framing is non-destructive.** §9's "crop to the required aspect ratio before saving" cannot hold: `media` is a shared library and `product_media` is a join table, so one image can be a product photo and a post cover at once and a stored crop would lock it to one aspect forever. One derivative set is kept at the natural aspect; `media.focal_x` / `focal_y`, seeded by sharp's attention detector and editable in the admin, drive `object-fit: cover` at the consumer. Settled 2026-09-08. |
 | 16 | **Media is served at `/media/*`, not `/api/media/*`.** §3 offered either, but §11 tells Cloudflare to cache `/media/*` and to BYPASS cache on `/api/*` — serving from an `/api` path would have made every image uncacheable at the edge, on a host with no guaranteed international bandwidth. Caddy can take the same path over in phase 11 with no URL change. Settled 2026-09-08. |
+| 17 | **Slugs are Thai UTF-8, generated from the title.** §9 asked for machine transliteration, but reaching the quality of §7's hand-written `puangreed-baengpan` needs dictionary word-segmentation — Thai has no spaces between words — and a character-level mapping would bake an awkward permanent URL. §6's own example is already a Thai slug, Google indexes UTF-8 paths, and slugs are per-locale so enabling English later gives it clean Latin independently. Editable, uniqueness-checked, 301 written on change. Settled 2026-09-08. |
+| 18 | **Rich-text bodies allow headings (2–3), bold, italic, lists, blockquote, rule, links and images chosen from the media library.** Images carry a `mediaId`, never a URL, so an external image is not expressible in the document model — "no hotlinked assets" becomes structural rather than a review item. The server rebuilds every document against the whitelist before storage and drops any image whose media row does not exist. Settled 2026-09-08. |
 
 ### Still open — ask before the phase that needs them
 

@@ -72,8 +72,10 @@ upload, originals over the threshold are dropped, and the admin dashboard shows 
 
 - **`next build` copies `.env` into `.next/standalone/.env`,** and the standalone server loads it
   from there. Two consequences. First, a CI image built on a checkout that has a `.env` ships those
-  secrets inside the image — §11 builds in CI and pulls on the VPS, so make the CI job assert `.env`
-  is absent before `pnpm build`. Second, it makes local fail-fast testing lie: the server picks up
+  secrets inside the image — §11 builds in CI and pulls on the VPS, so the CI job asserts `.env` is
+  absent before `pnpm build` (`.github/workflows/ci.yml`). Verified both ways: the guard exits 1 when
+  a `.env` is present, and a build with one really does copy the secret into
+  `.next/standalone/.env`. Second, it makes local fail-fast testing lie: the server picks up
   the baked file even when the variable is unset in the environment. Delete `.env` and rebuild
   before testing env validation.
 - **Next catches a throw from `instrumentation.register()`** and keeps the process alive serving
@@ -177,4 +179,53 @@ upload, originals over the threshold are dropped, and the admin dashboard shows 
   `/opt/pw-browsers/chromium-1194/chrome-linux/chrome`. Launch with an explicit `executablePath`.
 - `/proc/<pid>/comm` truncates to 15 chars, so `next-server (v15.5.25)` reads as `next-server (v1`.
   Match on `/proc/<pid>/cmdline` when hunting a stray dev server — and never `pkill`.
+
+**Phase 4**
+
+- **`z.string().optional().or(z.literal("").transform(() => undefined))` does not turn "" into
+  undefined.** The empty string satisfies the *first* branch, so the union never reaches the
+  transform and "" is written verbatim — which for a nullable foreign key is a constraint violation,
+  not a null. This 500'd category creation. Use `z.preprocess` to strip "" before validation;
+  `optionalString()` in `src/lib/validation/catalog.ts` is the one place that does it. `env.ts`
+  escapes the bug only because its first branch carries `.min(1)`, so "" fails it.
+- **Slugs are Thai UTF-8** (§14 decision 17). `slugify` keeps the Thai block and ASCII
+  alphanumerics; U+200B is a *word boundary* in Thai (no spaces between words) so it becomes a
+  hyphen, while ZWNJ/ZWJ/BOM are stripped as invisible.
+- **A 301 is only written when the entity was already published** — an unpublished draft has no
+  public URL to redirect from. `recordSlugRedirect` also re-points existing rows at the new target
+  so a rename chain stays one hop, and deletes any row that would redirect to itself.
+- **dnd-kit ships English screen-reader announcements that read out raw UUIDs.** Every admin-facing
+  string is Thai, and a screen reader is admin-facing, so `DndContext` gets Thai `announcements` and
+  `screenReaderInstructions` built from the category names.
+- Testing gotcha: dnd-kit keyboard sorting needs a beat between key presses. Space → ArrowDown →
+  Space fired back-to-back silently does nothing; ~400ms between them works. Mouse drag needs
+  intermediate `mouse.move` steps to clear the 4px activation constraint.
+- `products.sort_order` is ordered **within a category**, since products are listed per category.
+  New products sort last.
+- Server actions called from a client component inside `startTransition` do refresh the RSC payload,
+  so `revalidatePath` updates props with no manual reload — verified by a bulk unpublish changing
+  the table's state column in place.
+
+**Phase 5**
+
+- **The rich-text whitelist rebuilds, it does not filter.** `sanitizeDoc` constructs a new document
+  copying only known node types, marks and attributes; anything unrecognised is never copied, so a
+  shape nobody anticipated cannot survive by going unnoticed. `richDocSchema` then validates the
+  rebuilt result, so a bug in the rebuilder cannot widen what reaches the database. Verified by
+  submitting a hostile body through the real form: zero rows contain `javascript:`, `onclick`,
+  `script`, `rawHtml`, `onerror` or an external image URL.
+- **Rich-text images carry a `mediaId`, never a `src`.** An external image is therefore not
+  expressible in the stored document at all. The action additionally drops any image whose media row
+  is missing or soft-deleted — the sanitizer guarantees shape, only the database can confirm the
+  image is real.
+- **`src/lib/richtext/render.tsx` emits React elements, never an HTML string,** so there is nothing
+  for a payload to be injected into even if the sanitizer were bypassed. Tested through
+  `renderToStaticMarkup`: `<script>` in text comes out as `&lt;script&gt;`.
+- **Vite 8 transforms with Oxc, not esbuild.** Next needs `jsx: "preserve"` in tsconfig, which makes
+  Vite refuse `.tsx`; the override is `oxc: { jsx: "automatic" }` in `vitest.config.mts`
+  (`esbuild: { jsx }` is silently ignored). Needed to test any component.
+- Heading levels are clamped to 2–3 rather than rejected, so a pasted h1 degrades instead of failing
+  the save — an h1 in the body would compete with the page title.
+- A link mark with an unsafe scheme drops the *mark*, keeping the text. Losing the words because the
+  URL was bad would be worse than losing the link.
 

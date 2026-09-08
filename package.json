@@ -23,7 +23,16 @@
     "admin:create": "tsx --env-file-if-exists=.env scripts/create-admin.ts"
   },
   "dependencies": {
+    "@dnd-kit/core": "6.3.1",
+    "@dnd-kit/sortable": "10.0.0",
+    "@dnd-kit/utilities": "3.2.2",
     "@node-rs/argon2": "2.2.0",
+    "@tanstack/react-table": "8.21.3",
+    "@tiptap/extension-image": "3.31.3",
+    "@tiptap/extension-link": "3.31.3",
+    "@tiptap/pm": "3.31.3",
+    "@tiptap/react": "3.31.3",
+    "@tiptap/starter-kit": "3.31.3",
     "blurhash": "2.0.5",
     "clsx": "^2.1.1",
     "drizzle-orm": "0.45.2",

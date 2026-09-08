@@ -1,0 +1,106 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A newer push to the same branch supersedes the old run; main is never cancelled.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: typecheck · lint · test · migrate · seed · build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      # postgres:16-alpine matches the production compose file (SPEC.md §11), so
+      # a migration that only works on a different major fails here rather than
+      # on the VPS.
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: cida
+          POSTGRES_PASSWORD: cida
+          POSTGRES_DB: cida
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U cida -d cida"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      # Supplied as process environment, NOT as a .env file, and that distinction
+      # matters: `next build` copies a .env in the working directory into
+      # .next/standalone/.env, which would bake these into any image built from
+      # this checkout. See the "Refuse to build with a .env present" step below.
+      DATABASE_URL: postgres://cida:cida@localhost:5432/cida
+      AUTH_SECRET: ci-only-secret-0123456789abcdef0123456789abcdef
+      AUTH_URL: http://localhost:3000
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+      MEDIA_DIR: /tmp/ci-media
+      LINE_OA_URL: https://line.me/ti/p/%40355kxfoj
+      NEXT_TELEMETRY_DISABLED: "1"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Reads the pnpm version from package.json "packageManager", so CI and
+      # local development cannot drift apart.
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      # SPEC.md §11 builds images in CI and pulls them onto the VPS. `next build`
+      # copies a .env from the working directory into the standalone output, so a
+      # checkout that somehow has one would ship those secrets inside the image.
+      # .env is gitignored, so this should never fire — which is the point.
+      - name: Refuse to build with a .env present
+        run: |
+          if [ -e .env ]; then
+            echo "::error file=.env::A .env file is present in the checkout."
+            echo "next build copies it into .next/standalone/.env, baking secrets into the image."
+            exit 1
+          fi
+          echo "No .env in the checkout."
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Format
+        run: pnpm format:check
+
+      - name: Unit tests
+        run: pnpm test
+
+      - name: Migrate
+        run: pnpm db:migrate
+
+      # SPEC.md §12 phase 1: "pnpm db:seed runs clean twice in a row". The second
+      # run is the assertion — the seed hard-deletes its own rows before
+      # inserting, so a regression that made it additive would only show here.
+      - name: Seed
+        run: pnpm db:seed
+
+      - name: Seed again — must be idempotent
+        run: pnpm db:seed
+
+      - name: Build
+        run: pnpm build
