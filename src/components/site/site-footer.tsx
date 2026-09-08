@@ -2,7 +2,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { getCachedSetting } from "@/lib/settings/cached";
 import { publishedCategories } from "@/lib/public/queries";
-import { addFriendUrl } from "@/lib/line";
+import { goLinePath } from "@/lib/line";
 import { Seal } from "./seal";
 import { LineLink } from "./line-link";
 
@@ -127,7 +127,7 @@ export async function SiteFooter() {
           <p className="lat mt-4 text-sm text-(--color-text)">
             {tLine("handle", { id: line.oaId })}
           </p>
-          <LineLink href={addFriendUrl(line.oaId)} className="mt-3">
+          <LineLink href={goLinePath()} className="mt-3">
             {tLine("openAccount")}
           </LineLink>
 

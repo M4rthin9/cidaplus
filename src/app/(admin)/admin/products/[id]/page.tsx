@@ -86,6 +86,7 @@ export default async function EditProductPage({
           price: p.price ?? "",
           priceDisplay: p.priceDisplay,
           sku: p.sku ?? "",
+          lineMessageOverride: p.lineMessageOverride ?? "",
           isFeatured: p.isFeatured,
           publishState: fromPublishColumns(p.isPublished, p.publishedAt),
           publishedAt: toLocalInput(p.publishedAt),

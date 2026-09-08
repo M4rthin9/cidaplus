@@ -32,6 +32,7 @@ function parse(formData: FormData) {
     priceDisplay: formData.get("priceDisplay") ?? "exact",
     price: formData.get("price") ?? "",
     sku: formData.get("sku") ?? "",
+    lineMessageOverride: formData.get("lineMessageOverride") ?? "",
     isFeatured: formData.get("isFeatured") === "on",
     publishState: formData.get("publishState") ?? "draft",
     publishedAt: formData.get("publishedAt") ?? "",
@@ -97,6 +98,7 @@ export async function createProductAction(
         price: parsed.data.price ?? null,
         priceDisplay: parsed.data.priceDisplay,
         sku: parsed.data.sku ?? null,
+        lineMessageOverride: parsed.data.lineMessageOverride ?? null,
         isFeatured: parsed.data.isFeatured,
         sortOrder: maxRow?.next ?? 0,
         ...publish,
@@ -173,6 +175,7 @@ export async function updateProductAction(
         price: parsed.data.price ?? null,
         priceDisplay: parsed.data.priceDisplay,
         sku: parsed.data.sku ?? null,
+        lineMessageOverride: parsed.data.lineMessageOverride ?? null,
         isFeatured: parsed.data.isFeatured,
         ...publish,
       })
@@ -205,6 +208,7 @@ export async function updateProductAction(
           priceDisplay: before.priceDisplay,
           isPublished: before.isPublished,
           isFeatured: before.isFeatured,
+          lineMessageOverride: before.lineMessageOverride,
         },
         {
           name: parsed.data.name,
@@ -214,6 +218,7 @@ export async function updateProductAction(
           priceDisplay: after.priceDisplay,
           isPublished: after.isPublished,
           isFeatured: after.isFeatured,
+          lineMessageOverride: after.lineMessageOverride,
         },
       ),
     });

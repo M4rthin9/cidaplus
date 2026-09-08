@@ -2,7 +2,7 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { getCachedSetting } from "@/lib/settings/cached";
 import { featuredProducts, latestPosts, publishedCategories } from "@/lib/public/queries";
-import { addFriendUrl } from "@/lib/line";
+import { goLinePath } from "@/lib/line";
 import { ProductGrid } from "@/components/site/product-card";
 import { SectionHeading } from "@/components/site/section-heading";
 import { LineLink } from "@/components/site/line-link";
@@ -31,9 +31,8 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
   const tCategory = await getTranslations("category");
   const tNews = await getTranslations("news");
 
-  const [general, line, featured, categories, posts] = await Promise.all([
+  const [general, featured, categories, posts] = await Promise.all([
     getCachedSetting("general", locale),
-    getCachedSetting("line", locale),
     featuredProducts(locale),
     publishedCategories(locale),
     latestPosts(locale),
@@ -66,7 +65,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
               >
                 {t("viewAllProducts")}
               </Link>
-              <LineLink href={addFriendUrl(line.oaId)}>{tLine("openAccount")}</LineLink>
+              <LineLink href={goLinePath()}>{tLine("openAccount")}</LineLink>
             </div>
           </div>
         </div>

@@ -1,7 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
-import { getCachedSetting } from "@/lib/settings/cached";
-import { addFriendUrl } from "@/lib/line";
+import { goLinePath } from "@/lib/line";
 import { LineLink } from "@/components/site/line-link";
 
 /**
@@ -12,7 +11,6 @@ import { LineLink } from "@/components/site/line-link";
 export default async function NotFound() {
   const t = await getTranslations("error");
   const tLine = await getTranslations("line");
-  const line = await getCachedSetting("line");
 
   return (
     <main id="content" className="mx-auto max-w-(--container-site) px-4 py-24 md:px-6">
@@ -28,7 +26,7 @@ export default async function NotFound() {
         >
           {t("backHome")}
         </Link>
-        <LineLink href={addFriendUrl(line.oaId)}>{tLine("openAccount")}</LineLink>
+        <LineLink href={goLinePath()}>{tLine("openAccount")}</LineLink>
       </div>
     </main>
   );

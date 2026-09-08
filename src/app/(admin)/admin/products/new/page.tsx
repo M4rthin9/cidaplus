@@ -36,6 +36,7 @@ export default async function NewProductPage() {
           price: "",
           priceDisplay: "exact",
           sku: "",
+          lineMessageOverride: "",
           isFeatured: false,
           publishState: "draft",
           publishedAt: "",

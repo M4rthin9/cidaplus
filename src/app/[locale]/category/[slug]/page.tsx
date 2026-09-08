@@ -11,6 +11,7 @@ import { ProductGrid } from "@/components/site/product-card";
 import { Breadcrumbs } from "@/components/site/breadcrumbs";
 import { Pagination } from "@/components/site/pagination";
 import { SortLinks } from "@/components/site/sort-links";
+import { LineBand } from "@/components/site/line-band";
 
 export const revalidate = 60;
 
@@ -105,6 +106,8 @@ export default async function CategoryPage({ params, searchParams }: Props) {
       </section>
 
       <Pagination page={page} totalPages={totalPages} hrefFor={hrefFor} />
+
+      <LineBand />
     </main>
   );
 }

@@ -101,7 +101,10 @@
   "line": {
     "sectionTitle": "ติดต่อทาง LINE",
     "openAccount": "เพิ่มเพื่อนทาง LINE",
-    "handle": "LINE ID {id}"
+    "handle": "LINE ID {id}",
+    "ctaHint": "เปิดแชท LINE พร้อมข้อความสอบถามสินค้านี้",
+    "categoryCta": "สอบถามสินค้าในหมวดนี้ทาง LINE",
+    "categoryCtaBody": "เจ้าหน้าที่พร้อมให้คำแนะนำและแจ้งราคาผ่าน LINE Official Account"
   },
   "footer": {
     "about": "เกี่ยวกับหน่วยงาน",

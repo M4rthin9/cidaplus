@@ -26,6 +26,7 @@ export type ProductRow = {
   isPublished: boolean;
   publishedAt: string | null;
   imageCount: number;
+  clicks: number;
 };
 
 const STATE_LABEL: Record<string, string> = {
@@ -111,6 +112,10 @@ export function ProductTable({
         header: "สถานะ",
         accessorFn: (r) => stateOf(r),
         cell: ({ row }) => STATE_LABEL[stateOf(row.original)],
+      },
+      {
+        accessorKey: "clicks",
+        header: "คลิก LINE",
       },
       {
         accessorKey: "imageCount",

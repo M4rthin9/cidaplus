@@ -306,3 +306,42 @@ upload, originals over the threshold are dropped, and the admin dashboard shows 
 - Testing gotcha: matching `next-server` loosely against `/proc/*/cmdline` kills this agent's own
   shell, because the shell's command line contains the string it is searching for. Anchor it:
   `case "$c" in "next-server"*)`. Same failure mode as `pkill`, noted under phase 2.
+
+**Phase 8**
+
+- **`/go/line` lives under `[locale]`,** at `src/app/[locale]/go/line/route.ts`. §8 item 4 wants the
+  visitor's locale on every `line_clicks` row, and a route segment is the only way to get it that
+  cannot silently default — a query parameter can be dropped by whoever builds the link. Thai
+  resolves at `/go/line` and other locales at `/<locale>/go/line`, matching the as-needed prefix
+  scheme. The redirect is a **302, not a 301**: the target is derived from `settings.line`, and a
+  permanently-cached redirect would outlive the operator changing the account.
+- **`rel="noopener"`, never `noreferrer`, on the tracked LINE links.** Every LINE entry point now
+  points at `/go/line` on our own origin, so `noreferrer` buys no isolation the same-origin policy
+  does not already give — and it strips the `Referer` header, which is what §8 item 5 asks
+  `line_clicks.referrer` to record. Measured: with `noreferrer` every row stored a null referrer and
+  a useless path. The genuinely external links (Facebook, YouTube in the footer) keep both.
+- **A `Date` interpolated into a raw `sql` fragment fails at bind time.** Inside
+  `` sql`count(*) filter (where ${column} >= ${aDate})` `` drizzle has no column type to infer the
+  parameter from, so postgres.js is handed a `Date` where it wants a string and the whole query
+  throws `ERR_INVALID_ARG_TYPE`. Pass `.toISOString()` with an explicit `::timestamptz`. A `Date` in
+  `where(gte(column, date))` is fine — that path is typed by the column.
+- **Empty days come from `generate_series`, not from the chart.** A gap in a time axis is a
+  different claim from a zero, and only the database knows which days fall in the window.
+- **The dashboard chart is boxes, not SVG.** A responsive SVG has to choose between letterboxing and
+  `preserveAspectRatio="none"`, and the latter scales columns, corner radii and labels horizontally
+  — measured at 35px wide against a 24px cap, with visibly stretched type. In CSS the mark specs are
+  real pixels at every width. Verified by screenshot at 1280px and at 360px.
+- **Green on the click chart is the one sanctioned use.** docs/DESIGN.md reserves `--color-accent`
+  for the LINE handoff and nothing else, and this chart is that handoff counted. One series, so no
+  legend; the peak is the only direct label; the `<details>` table is the non-visual equivalent.
+- **The GA4 event §8 item 5 asks for is deliberately not fired.** `/go/line` is a server redirect
+  with no client to run `gtag` on, and §10 requires analytics to load only after PDPA consent, which
+  is phase 10's banner. The `line_clicks` row is the durable signal either way; phase 10 can add the
+  browser-side event once consent exists.
+- **`line_clicks` retention is still unenforced.** §6 says a nightly cron prunes past 30 days; every
+  query here already windows to `RETENTION_DAYS`, but nothing deletes. The cron is deploy tooling —
+  phase 11.
+- Testing gotcha, and the second time this has bitten: `form button[type="submit"]` in the admin
+  clicks **sign out**, because the layout's sign-out form precedes page content. Scope it —
+  `form:has(input[name="lineMessageOverride"]) button[type="submit"]`. Already recorded under phase
+  3; recorded again because the phase-3 note names a different form.

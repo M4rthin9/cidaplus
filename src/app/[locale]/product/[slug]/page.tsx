@@ -2,13 +2,11 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { bodyMedia, productBySlug, relatedProducts } from "@/lib/public/queries";
-import { getCachedSetting } from "@/lib/settings/cached";
-import { addFriendUrl } from "@/lib/line";
 import { formatPrice } from "@/lib/format";
 import { RichText } from "@/lib/richtext/render";
 import { MediaPlaceholder, MediaThumb } from "@/components/media/media-thumb";
 import { Breadcrumbs } from "@/components/site/breadcrumbs";
-import { LineLink } from "@/components/site/line-link";
+import { ProductLineCta } from "@/components/site/product-line-cta";
 import { ProductGrid } from "@/components/site/product-card";
 import { SectionHeading } from "@/components/site/section-heading";
 
@@ -33,8 +31,7 @@ export default async function ProductPage({ params }: Props) {
   const t = await getTranslations("product");
   const tNav = await getTranslations("nav");
 
-  const [line, media, related] = await Promise.all([
-    getCachedSetting("line", locale),
+  const [media, related] = await Promise.all([
     bodyMedia(product.body, locale),
     relatedProducts(locale, product.categoryId, product.id),
   ]);
@@ -43,7 +40,11 @@ export default async function ProductPage({ params }: Props) {
   const [cover, ...rest] = product.images;
 
   return (
-    <main id="content" className="mx-auto max-w-(--container-site) px-4 py-12 md:px-6">
+    <main
+      id="content"
+      /* pb-24 on mobile clears the fixed LINE bar so it never covers the last row. */
+      className="mx-auto max-w-(--container-site) px-4 py-12 pb-24 md:px-6 md:pb-12"
+    >
       <Breadcrumbs
         items={[
           { href: "/", label: tNav("home") },
@@ -98,15 +99,7 @@ export default async function ProductPage({ params }: Props) {
             <p className="mt-4 max-w-prose text-(--color-text)">{product.shortDesc}</p>
           )}
 
-          {/*
-           * Phase 8 replaces this href with `/go/line?p=<slug>` so the operator
-           * gets the pre-filled message and the click is recorded. The label and
-           * the account both already come from `settings.line`, so that change
-           * is one attribute — the URL stays built in `src/lib/line.ts` alone.
-           */}
-          <LineLink href={addFriendUrl(line.oaId)} className="mt-8 w-full sm:w-auto">
-            {line.buttonLabel}
-          </LineLink>
+          <ProductLineCta slug={product.slug} />
 
           {product.sku && (
             <p className="mt-6 text-sm text-(--color-text-muted)">

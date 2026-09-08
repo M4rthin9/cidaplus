@@ -6,7 +6,7 @@ import { enabledLocales } from "@/lib/public/locales";
 import { alternatePaths, withoutLocalePrefix } from "@/lib/public/alternates";
 import { LOCALES } from "@/i18n/routing";
 import { publishedCategories } from "@/lib/public/queries";
-import { addFriendUrl } from "@/lib/line";
+import { goLinePath } from "@/lib/line";
 import { Seal } from "./seal";
 import { SiteNav } from "./site-nav";
 
@@ -36,7 +36,7 @@ export async function SiteHeader() {
     publishedCategories(locale),
   ]);
 
-  const lineHref = addFriendUrl(line.oaId);
+  const lineHref = goLinePath();
 
   /**
    * The switcher needs each locale's own slug so it lands on the same product
