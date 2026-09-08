@@ -12,6 +12,7 @@ const ACTION_LABEL: Record<string, string> = {
   update: "แก้ไข",
   delete: "ลบ",
   purge: "ลบถาวร",
+  reorder: "จัดลำดับ",
   restore: "กู้คืน",
   "login.success": "เข้าสู่ระบบสำเร็จ",
   "login.failure": "เข้าสู่ระบบไม่สำเร็จ",
@@ -23,6 +24,9 @@ const ENTITY_LABEL: Record<string, string> = {
   users: "ผู้ดูแลระบบ",
   auth: "การเข้าสู่ระบบ",
   media: "คลังภาพ",
+  categories: "หมวดหมู่",
+  products: "สินค้า",
+  posts: "ข่าวและกิจกรรม",
 };
 
 export default async function AuditPage() {

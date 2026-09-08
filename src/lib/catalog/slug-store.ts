@@ -2,8 +2,8 @@ import "server-only";
 
 import { and, eq, ne } from "drizzle-orm";
 import { db } from "@/db/client";
-import { categoryI18n, productI18n, redirects } from "@/db/schema";
-import { categoryPath, productPath, uniqueSlug } from "@/lib/slug";
+import { categoryI18n, postI18n, productI18n, redirects } from "@/db/schema";
+import { categoryPath, postPath, productPath, uniqueSlug } from "@/lib/slug";
 
 /**
  * Slug persistence: uniqueness within a locale, and the 301 row that §9 requires
@@ -56,6 +56,31 @@ export async function productSlugTaken(
   return rows.length > 0;
 }
 
+export async function postSlugTaken(
+  locale: string,
+  slug: string,
+  exceptPostId?: string,
+): Promise<boolean> {
+  const rows = await db
+    .select({ id: postI18n.postId })
+    .from(postI18n)
+    .where(
+      exceptPostId
+        ? and(
+            eq(postI18n.locale, locale),
+            eq(postI18n.slug, slug),
+            ne(postI18n.postId, exceptPostId),
+          )
+        : and(eq(postI18n.locale, locale), eq(postI18n.slug, slug)),
+    )
+    .limit(1);
+  return rows.length > 0;
+}
+
+export function freePostSlug(locale: string, base: string, exceptId?: string) {
+  return uniqueSlug(base, (c) => postSlugTaken(locale, c, exceptId));
+}
+
 export function freeCategorySlug(locale: string, base: string, exceptId?: string) {
   return uniqueSlug(base, (c) => categorySlugTaken(locale, c, exceptId));
 }
@@ -76,14 +101,14 @@ type Executor = Parameters<Parameters<typeof db.transaction>[0]>[0] | typeof db;
  */
 export async function recordSlugRedirect(
   exec: Executor,
-  kind: "product" | "category",
+  kind: "product" | "category" | "post",
   locale: string,
   oldSlug: string,
   newSlug: string,
 ): Promise<void> {
   if (oldSlug === newSlug) return;
 
-  const build = kind === "product" ? productPath : categoryPath;
+  const build = kind === "product" ? productPath : kind === "post" ? postPath : categoryPath;
   const from = build(locale, oldSlug);
   const to = build(locale, newSlug);
   if (from === to) return;

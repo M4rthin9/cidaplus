@@ -2,7 +2,15 @@ import "server-only";
 
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/db/client";
-import { categories, categoryI18n, locales, media, mediaI18n, productI18n } from "@/db/schema";
+import {
+  categories,
+  categoryI18n,
+  locales,
+  media,
+  mediaI18n,
+  postI18n,
+  productI18n,
+} from "@/db/schema";
 import { DEFAULT_LOCALE } from "@/lib/slug";
 
 /** Shared reads for the catalog admin. Kept out of the pages so both editors agree. */
@@ -48,11 +56,17 @@ export async function localeTabs(
   const all = await db.select().from(locales).orderBy(asc(locales.sortOrder));
 
   const present = new Set<string>();
-  if (entityId && table === "product") {
-    const rows = await db
-      .select({ locale: productI18n.locale })
-      .from(productI18n)
-      .where(eq(productI18n.productId, entityId));
+  if (entityId) {
+    const rows =
+      table === "product"
+        ? await db
+            .select({ locale: productI18n.locale })
+            .from(productI18n)
+            .where(eq(productI18n.productId, entityId))
+        : await db
+            .select({ locale: postI18n.locale })
+            .from(postI18n)
+            .where(eq(postI18n.postId, entityId));
     for (const r of rows) present.add(r.locale);
   }
 

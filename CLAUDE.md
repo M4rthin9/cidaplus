@@ -204,3 +204,26 @@ upload, originals over the threshold are dropped, and the admin dashboard shows 
   so `revalidatePath` updates props with no manual reload — verified by a bulk unpublish changing
   the table's state column in place.
 
+**Phase 5**
+
+- **The rich-text whitelist rebuilds, it does not filter.** `sanitizeDoc` constructs a new document
+  copying only known node types, marks and attributes; anything unrecognised is never copied, so a
+  shape nobody anticipated cannot survive by going unnoticed. `richDocSchema` then validates the
+  rebuilt result, so a bug in the rebuilder cannot widen what reaches the database. Verified by
+  submitting a hostile body through the real form: zero rows contain `javascript:`, `onclick`,
+  `script`, `rawHtml`, `onerror` or an external image URL.
+- **Rich-text images carry a `mediaId`, never a `src`.** An external image is therefore not
+  expressible in the stored document at all. The action additionally drops any image whose media row
+  is missing or soft-deleted — the sanitizer guarantees shape, only the database can confirm the
+  image is real.
+- **`src/lib/richtext/render.tsx` emits React elements, never an HTML string,** so there is nothing
+  for a payload to be injected into even if the sanitizer were bypassed. Tested through
+  `renderToStaticMarkup`: `<script>` in text comes out as `&lt;script&gt;`.
+- **Vite 8 transforms with Oxc, not esbuild.** Next needs `jsx: "preserve"` in tsconfig, which makes
+  Vite refuse `.tsx`; the override is `oxc: { jsx: "automatic" }` in `vitest.config.mts`
+  (`esbuild: { jsx }` is silently ignored). Needed to test any component.
+- Heading levels are clamped to 2–3 rather than rejected, so a pasted h1 degrades instead of failing
+  the save — an h1 in the body would compete with the page title.
+- A link mark with an unsafe scheme drops the *mark*, keeping the text. Losing the words because the
+  URL was bad would be worse than losing the link.
+
