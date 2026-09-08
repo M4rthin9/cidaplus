@@ -72,8 +72,10 @@ upload, originals over the threshold are dropped, and the admin dashboard shows 
 
 - **`next build` copies `.env` into `.next/standalone/.env`,** and the standalone server loads it
   from there. Two consequences. First, a CI image built on a checkout that has a `.env` ships those
-  secrets inside the image — §11 builds in CI and pulls on the VPS, so make the CI job assert `.env`
-  is absent before `pnpm build`. Second, it makes local fail-fast testing lie: the server picks up
+  secrets inside the image — §11 builds in CI and pulls on the VPS, so the CI job asserts `.env` is
+  absent before `pnpm build` (`.github/workflows/ci.yml`). Verified both ways: the guard exits 1 when
+  a `.env` is present, and a build with one really does copy the secret into
+  `.next/standalone/.env`. Second, it makes local fail-fast testing lie: the server picks up
   the baked file even when the variable is unset in the environment. Delete `.env` and rebuild
   before testing env validation.
 - **Next catches a throw from `instrumentation.register()`** and keeps the process alive serving
