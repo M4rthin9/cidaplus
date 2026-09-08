@@ -27,13 +27,16 @@ const MediaImage = Image.extend({
 });
 
 type Props = {
-  name: string;
+  /** Omit inside the section builder, which keeps the document in React state. */
+  name?: string;
   initialDoc: unknown;
   media: PickerItem[];
   mediaUrlFor: (id: string) => string;
+  /** Called with the document on every edit, for callers that are not a form. */
+  onChange?: (doc: unknown) => void;
 };
 
-export function RichTextEditor({ name, initialDoc, media, mediaUrlFor }: Props) {
+export function RichTextEditor({ name, initialDoc, media, mediaUrlFor, onChange }: Props) {
   const [json, setJson] = useState(() =>
     JSON.stringify(initialDoc ?? { type: "doc", content: [] }),
   );
@@ -57,7 +60,11 @@ export function RichTextEditor({ name, initialDoc, media, mediaUrlFor }: Props) 
           "min-h-64 rounded-b-(--radius-control) border border-t-0 border-(--color-border) bg-(--color-bg) px-4 py-3 leading-[1.8] focus:outline-none",
       },
     },
-    onUpdate: ({ editor }) => setJson(JSON.stringify(editor.getJSON())),
+    onUpdate: ({ editor }) => {
+      const doc = editor.getJSON();
+      setJson(JSON.stringify(doc));
+      onChange?.(doc);
+    },
   });
 
   // Insert whatever the picker returns, then clear it so the next pick fires.
@@ -172,7 +179,7 @@ export function RichTextEditor({ name, initialDoc, media, mediaUrlFor }: Props) 
       </div>
 
       <EditorContent editor={editor} />
-      <input type="hidden" name={name} value={json} />
+      {name && <input type="hidden" name={name} value={json} />}
 
       <p className="mt-2 text-sm text-(--color-text-muted)">
         รูปภาพต้องเลือกจากคลังภาพเท่านั้น · ระบบจะตรวจสอบเนื้อหาอีกครั้งก่อนบันทึก

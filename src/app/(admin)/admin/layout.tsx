@@ -20,6 +20,8 @@ const NAV: readonly NavItem[] = [
   { href: "/admin/categories", label: "หมวดหมู่" },
   { href: "/admin/products", label: "สินค้า" },
   { href: "/admin/posts", label: "ข่าวและกิจกรรม" },
+  { href: "/admin/pages", label: "หน้าเว็บ" },
+  { href: "/admin/menus", label: "เมนู" },
   { href: "/admin/media", label: "คลังภาพ" },
   { href: "/admin/messages", label: "กล่องข้อความ" },
   { href: "/admin/users", label: "ผู้ดูแลระบบ", ownerOnly: true },

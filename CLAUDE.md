@@ -345,3 +345,40 @@ upload, originals over the threshold are dropped, and the admin dashboard shows 
   clicks **sign out**, because the layout's sign-out form precedes page content. Scope it —
   `form:has(input[name="lineMessageOverride"]) button[type="submit"]`. Already recorded under phase
   3; recorded again because the phase-3 note names a different form.
+
+**Phase 9**
+
+- **`revalidatePath("/")` does nothing for a route that lives at `/[locale]`.** The cache entry is
+  keyed by the *matched route*, not by the URL a visitor types, so a saved page sat in the database
+  while the homepage kept serving its previous render. Use the route-pattern form —
+  `revalidatePath("/[locale]", "page")`, and `revalidatePath("/[locale]", "layout")` for anything
+  the header or footer renders. Measured both ways.
+- **The section renderers must not import `server-only`.** A module with no directive is bundled
+  into whichever graph imports it, so `src/components/sections/render.tsx` renders on the server for
+  the public page *and* in the browser for the admin's live preview — the same components, which is
+  the only way a preview is honest rather than merely plausible. Nothing in a section is interactive
+  (the FAQ is `<details>`), so serving both graphs costs no public bundle.
+- **The preview loads a superset once and narrows it in the browser.** `loadPreviewBase` fetches
+  every published category, 24 featured products and 12 posts; `buildPreviewData` applies the same
+  filters `loadSectionData` applies in SQL. That is what makes dragging a block repaint with no
+  round trip. `ProductCardData` carries `categoryId` purely so the preview can apply a block's
+  category filter exactly rather than approximately.
+- **Sections and menus rebuild rather than filter,** like the rich-text whitelist. `sanitizeSections`
+  and `sanitizeMenuItems` run on write *and* on public read, so a row written by an older version of
+  the app cannot take a page down. Both structures are submitted as JSON from the builder — nested
+  ordered data does not survive flat form fields — and the JSON is untrusted input like any other.
+- **Zod strips unknown keys, so extra menu depth is dropped, not rejected.** A third level costs the
+  operator that level and nothing else; an invalid `href` is different, because that is bad data and
+  it takes its item with it. Worth knowing before writing a test that asserts rejection.
+- **`Label` in `components/ui/field.tsx` requires `htmlFor`** — a deliberate accessibility contract
+  from phase 2. Generate the id with `useId` and pass it to the control. For a control that is not a
+  single input (the media picker is a button that opens a dialog), use a styled `<p>` instead: a
+  `<label>` pointing at it would be a lie.
+- **Catalog reads do not swallow a database error the way settings reads do,** so `next build`
+  genuinely needs Postgres up — observed when the local server had stopped and the prerender of
+  `/th/contact` failed on `publishedCategories`. CI runs `db:migrate` and `db:seed` before `build`,
+  so the flow that matters is fine; the asymmetry is worth knowing before assuming a build can run
+  dry.
+- Testing gotcha, the third time: `page.locator("form").first()` in the admin is the layout's
+  **sign-out** form. Scope by content — `page.locator("form").filter({ hasText: "เมนูส่วนหัว" })` —
+  or by a field the target form owns.
