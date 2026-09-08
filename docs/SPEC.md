@@ -481,6 +481,10 @@ Answered — treat these as settled, not as open questions.
 | 19 | **A settings key stores its structural half at locale `'*'` and its copy once per locale, merged on read.** §6 says copy is per-locale and structural values are global, but several keys hold both — `general` has a site name and a logo id — and storing the whole object per locale would duplicate the structural half, which is how values drift apart. Each key therefore declares a `global` schema and an optional `localized` one. Settled 2026-09-08. |
 | 20 | **`settings.line` stores the OA handle (`oaId`), not §8's literal `oa_url`.** The two links the site needs cannot both be one URL: `line.me/ti/p/<id>` adds the friend, `line.me/R/oaMessage/<id>/?<text>` opens a chat carrying the pre-filled message §8 requires. Both derive from the handle. Phase 8 owns `/go/line` and should confirm this shape. Settled 2026-09-08. |
 
+| 21 | **Thai is served unprefixed; other locales are prefixed** (`localePrefix: "as-needed"`). §5 says "all public routes are locale-prefixed", but phase 4 shipped `localePrefix()` in `src/lib/slug.ts` returning `""` for Thai, and every 301 row `recordSlugRedirect` has written since points at that shape — prefixing Thai now would invalidate them. §5's own site map already lists `/contact` unprefixed. The upside is permanent: Thai URLs do not change on the day English is switched on. `localeDetection` is off while one locale is enabled, because Accept-Language routing would send an English-preferring visitor to `/en`, which is disabled and would 404. Settled 2026-09-08. |
+| 22 | **Two root layouts: the storefront's is `app/[locale]/layout.tsx`, the admin's is `app/(admin)/layout.tsx`.** docs/DESIGN.md requires `lang` and `dir` set per locale "from day one, even with one locale enabled", and a layout above a dynamic segment never receives that segment's params — a single shared root could only have got `lang` right by reading the request path and going dynamic on every page. Route URLs are unchanged; the admin keeps `lang="th"`, which is correct since §9 makes the admin Thai-only. Settled 2026-09-08. |
+| 23 | **The affiliation is a footer credit line, not a link,** and phone, address and LINE carry equal weight. Both were open questions under "Raised by the seal". A link on every page would send visitors to the parent agency from the footer, and a credit states the affiliation without claiming to speak for กรมราชทัณฑ์. On channels: a public-sector body cannot make a chat app the only way to reach it — a visitor with no LINE account would have no channel — so §8's LINE-only posture is relaxed to LINE-plus-equals on the footer and `/contact`, while LINE stays the primary CTA on a product page. Settled 2026-09-08. |
+
 ### Still open — ask before the phase that needs them
 
 1. ~~**Logo master dimensions, alpha channel, and edge quality.**~~ **Answered 2026-09-07.**
@@ -494,19 +498,23 @@ Answered — treat these as settled, not as open questions.
    resolved. Nobody should machine-translate product names without a human sign-off; decide who that
    is before `locales.is_enabled` is flipped on anything.
 
-3. **SMTP provider, when chosen.** Phase 7. The contact form must work without it (§9).
+3. ~~**SMTP provider, when chosen.**~~ **Still unset as of phase 7, and that is a supported state.**
+   The form writes `contact_messages` first and only then attempts a notification; with `SMTP_*`
+   unset, `emailed_at` stays null and `/admin/messages` surfaces the count of un-notified enquiries
+   so nobody assumes a mail went out. Supplying the credentials later is an env change, no code.
 
 4. **EN admin toggle — §9 `[DECIDE]`.** All admin copy is Thai. Whether an English admin toggle is
    also wanted affects phase 2. Assume no unless told otherwise.
 
 ### Raised by the seal, not yet in any phase
 
-- **Does the site need to state its affiliation formally** — a link to the กรมราชทัณฑ์ parent site, a
-  ministry footer credit, or a specific official disclaimer? Official Thai institutional sites
-  normally carry one, and it is cheaper to design the footer around it now than to retrofit.
-- **Is a LINE Official Account acceptable as the sole enquiry channel for a public-sector body,** or
-  does a government telephone number and postal address need equal prominence? §8 currently makes
-  LINE the only CTA.
+- ~~**Does the site need to state its affiliation formally**~~ and ~~**is a LINE Official Account
+  acceptable as the sole enquiry channel**~~ — both answered in phase 7, decision 23 above.
+- **An authoritative SVG master of the seal is still outstanding** (§14 still-open 1). It blocks the
+  favicon, the maskable icon and the OG image, because docs/DESIGN.md requires a *simplified mark
+  drawn on purpose* for those sizes rather than a downscale of the full seal — the two rings of Thai
+  microtext become noise below ~96px. The site therefore ships with no favicon and Lighthouse Best
+  Practices sits at 96 rather than 100 for the one missing-resource audit. Phase 10 owns the icons.
 - **WCAG 2.0 AA is effectively mandatory** for Thai public-sector sites, which turns §10's Lighthouse
   Accessibility ≥ 95 from a target into a compliance floor. The palette in `docs/DESIGN.md` now
   clears it; keep every future token above 4.5:1 for normal text.
