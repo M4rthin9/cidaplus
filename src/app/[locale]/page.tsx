@@ -4,6 +4,7 @@ import { getCachedSetting } from "@/lib/settings/cached";
 import { goLinePath } from "@/lib/line";
 import { HOME_PAGE_KEY, defaultHomeSections, getPageByKey } from "@/lib/pages/store";
 import { loadSectionData } from "@/lib/sections/data";
+import { publicMetadata } from "@/lib/seo/metadata";
 import { Sections } from "@/components/sections/render";
 
 /**
@@ -23,11 +24,12 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
   const page = await getPageByKey(HOME_PAGE_KEY, locale);
-  if (!page) return {};
-  return {
-    title: page.seoTitle ?? undefined,
-    description: page.seoDescription ?? undefined,
-  };
+  return publicMetadata({
+    locale,
+    paths: "/",
+    title: page?.seoTitle ?? undefined,
+    description: page?.seoDescription ?? undefined,
+  });
 }
 
 export default async function HomePage({ params }: { params: Promise<{ locale: string }> }) {

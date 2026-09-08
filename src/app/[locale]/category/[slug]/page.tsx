@@ -3,10 +3,14 @@ import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import {
   PAGE_SIZE,
+  alternateSlugs,
   categoryBySlug,
   productsInCategory,
   type ProductSort,
 } from "@/lib/public/queries";
+import { assertEnv } from "@/lib/env";
+import { publicMetadata } from "@/lib/seo/metadata";
+import { JsonLd, breadcrumbJsonLd } from "@/lib/seo/jsonld";
 import { ProductGrid } from "@/components/site/product-card";
 import { Breadcrumbs } from "@/components/site/breadcrumbs";
 import { Pagination } from "@/components/site/pagination";
@@ -33,9 +37,19 @@ function parsePage(value: string | undefined): number {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug } = await params;
-  const category = await categoryBySlug(locale, decodeURIComponent(slug));
+  const decoded = decodeURIComponent(slug);
+  const category = await categoryBySlug(locale, decoded);
   if (!category) return {};
-  return { title: category.name, description: category.description ?? undefined };
+
+  const slugs = await alternateSlugs("category", decoded, locale);
+  return publicMetadata({
+    locale,
+    paths: Object.fromEntries(Object.entries(slugs).map(([code, s]) => [code, `/category/${s}`])),
+    title: category.name,
+    description: category.description ?? undefined,
+    // §10 asks for a per-entity OG image on products and posts only; a category
+    // takes the site default rather than borrowing one of its products' photos.
+  });
 }
 
 export default async function CategoryPage({ params, searchParams }: Props) {
@@ -68,6 +82,14 @@ export default async function CategoryPage({ params, searchParams }: Props) {
 
   return (
     <main id="content" className="mx-auto max-w-(--container-site) px-4 py-12 md:px-6">
+      <JsonLd
+        data={breadcrumbJsonLd(assertEnv().NEXT_PUBLIC_SITE_URL, locale, [
+          { name: tNav("home"), path: "/" },
+          { name: tNav("categories"), path: "/categories" },
+          { name: category.name, path: `/category/${category.slug}` },
+        ])}
+      />
+
       <Breadcrumbs
         items={[
           { href: "/", label: tNav("home") },

@@ -51,7 +51,7 @@ const postIsLive = and(
 
 const categoryIsLive = and(eq(categories.isPublished, true), isNull(categories.deletedAt));
 
-export type PublicMedia = ThumbMedia & { alt: string | null };
+export type PublicMedia = ThumbMedia & { alt: string | null; width: number | null };
 
 export type ProductCardData = {
   id: string;
@@ -118,6 +118,7 @@ async function primaryImages(
       blurhash: media.blurhash,
       focalX: media.focalX,
       focalY: media.focalY,
+      width: media.width,
     })
     .from(productMedia)
     .innerJoin(media, eq(media.id, productMedia.mediaId))
@@ -273,6 +274,7 @@ export async function mediaByIds(ids: string[], locale: string): Promise<Map<str
       blurhash: media.blurhash,
       focalX: media.focalX,
       focalY: media.focalY,
+      width: media.width,
     })
     .from(media)
     .where(and(inArray(media.id, ids), isNull(media.deletedAt)));
@@ -461,6 +463,7 @@ export async function productBySlug(
       blurhash: media.blurhash,
       focalX: media.focalX,
       focalY: media.focalY,
+      width: media.width,
       isPrimary: productMedia.isPrimary,
       sortOrder: productMedia.sortOrder,
     })

@@ -382,3 +382,48 @@ upload, originals over the threshold are dropped, and the admin dashboard shows 
 - Testing gotcha, the third time: `page.locator("form").first()` in the admin is the layout's
   **sign-out** form. Scope by content — `page.locator("form").filter({ hasText: "เมนูส่วนหัว" })` —
   or by a field the target form owns.
+
+**Phase 10**
+
+- **The hosted validators are unreachable from this sandbox.** `search.google.com/test/rich-results`
+  and `validator.schema.org` are both refused by the egress proxy (organization policy), so §12's
+  "Rich Results test passes" was verified against Google's *documented* Product / Article /
+  BreadcrumbList / Organization requirements with a local checker, plus a HEAD request on every
+  `image` a validator would fetch. Run the hosted test once the site is publicly reachable.
+- **`Product` carries an offer only when a price is actually shown.** §10 omits
+  `offers.availability` because there is no online purchase; the offer itself is still the only way
+  to state a price, so `contact` and `hidden` products get no `offers` node at all. Inventing one
+  would be a public claim about a price nobody published — the same reasoning that keeps the price
+  line reading สอบถามราคา.
+- **The pipeline never upscales, so nothing may advertise a rendition it did not write.** A 420px
+  upload has only the 400px derivative; `MediaThumb`'s `srcSet` listed 400/800/1600 unconditionally
+  and the browser fetched an 800.avif that 404'd, which Lighthouse counted as a console error and
+  dropped Best Practices to 96. Both `MediaThumb` and the OG image helper now take the source width
+  and pick from what exists. `PublicMedia` carries `width` for exactly this.
+- **hreflang and the sitemap are generated from `locales.is_enabled`, never from the routing table.**
+  An alternate for a disabled locale is a 404 handed to a crawler. Verified reciprocal across all
+  three locales with three distinct slugs: every page advertises the identical set, every advertised
+  URL is one of the pages, and `x-default` points at Thai.
+- **Next renders `hrefLang`, not `hreflang`, in the HTML.** It is valid — HTML attribute names are
+  case-insensitive — but a case-sensitive grep or regex over the markup finds nothing and looks like
+  the tags are missing.
+- **`sitemap.xml` is a prerendered route with a 1-hour window,** so toggling a locale does not show
+  up there until it revalidates or the app is rebuilt. Whoever builds `/admin/settings/languages`
+  should `revalidatePath("/sitemap.xml")` on save.
+- **Analytics never load before consent, and the banner never renders when there is nothing to
+  consent to.** `ConsentGate` is a server component that returns null unless `settings.seo` carries a
+  GA4 or GTM id — a banner that asks permission for nothing trains people to dismiss banners. The
+  decision lives in `localStorage`, not a cookie. Verified: zero `googletagmanager` script tags
+  before consent, one after, none ever after declining, and the choice survives a reload.
+- **librsvg resolves fonts through fontconfig, which cannot read woff2.** The OG image typesets the
+  institution's name in Anuphan by pointing `FONTCONFIG_FILE` at TrueType copies in `assets/fonts`
+  (outside `public/`, regeneration documented in the README there). Without it the text silently
+  falls back to whatever Thai face the machine carries, so the image would differ per developer.
+  The script also *measures* the rendered text and scales it to fit — at a fixed size the name ran
+  off the canvas and the last glyphs were simply cut.
+- **sharp cannot write `.ico`.** The format is a 6-byte header, a 16-byte directory entry per image
+  and the PNGs themselves; `buildIco` in the brand script writes it directly rather than adding a
+  dependency to a project that pins every version.
+- The app icons are **provisional downscales of the seal** (§14 decision 27), which is the treatment
+  docs/DESIGN.md forbids, accepted deliberately because shipping none meant a 404 on every page load.
+  Re-running `scripts/build-brand-assets.ts` replaces all six once a drawn mark exists.

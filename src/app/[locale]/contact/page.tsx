@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { getCachedSetting } from "@/lib/settings/cached";
+import { publicMetadata } from "@/lib/seo/metadata";
 import { goLinePath } from "@/lib/line";
 import { Breadcrumbs } from "@/components/site/breadcrumbs";
 import { LineLink } from "@/components/site/line-link";
@@ -16,7 +17,12 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "contact" });
-  return { title: t("title"), description: t("intro") };
+  return publicMetadata({
+    locale,
+    paths: "/contact",
+    title: t("title"),
+    description: t("intro"),
+  });
 }
 
 export default async function ContactPage({ params }: { params: Promise<{ locale: string }> }) {

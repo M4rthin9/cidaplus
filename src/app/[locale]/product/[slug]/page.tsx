@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { bodyMedia, productBySlug, relatedProducts } from "@/lib/public/queries";
+import { assertEnv } from "@/lib/env";
+import { ogImageForStorageKey, publicMetadata } from "@/lib/seo/metadata";
+import { JsonLd, breadcrumbJsonLd, productJsonLd } from "@/lib/seo/jsonld";
 import { formatPrice } from "@/lib/format";
 import { RichText } from "@/lib/richtext/render";
 import { MediaPlaceholder, MediaThumb } from "@/components/media/media-thumb";
@@ -18,7 +21,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug } = await params;
   const product = await productBySlug(locale, decodeURIComponent(slug));
   if (!product) return {};
-  return { title: product.name, description: product.shortDesc ?? undefined };
+
+  const cover = product.images[0];
+  return publicMetadata({
+    locale,
+    // Each locale's own slug, so the hreflang set points at the same product
+    // rather than at a 404 (§10).
+    paths: Object.fromEntries(
+      Object.entries(product.slugsByLocale).map(([code, s]) => [code, `/product/${s}`]),
+    ),
+    title: product.name,
+    description: product.shortDesc ?? undefined,
+    image: cover ? ogImageForStorageKey(cover.storageKey, cover.width) : undefined,
+  });
 }
 
 export default async function ProductPage({ params }: Props) {
@@ -30,6 +45,7 @@ export default async function ProductPage({ params }: Props) {
 
   const t = await getTranslations("product");
   const tNav = await getTranslations("nav");
+  const base = assertEnv().NEXT_PUBLIC_SITE_URL;
 
   const [media, related] = await Promise.all([
     bodyMedia(product.body, locale),
@@ -39,12 +55,42 @@ export default async function ProductPage({ params }: Props) {
   const price = formatPrice(product.price);
   const [cover, ...rest] = product.images;
 
+  const crumbs = [
+    { name: tNav("home"), path: "/" },
+    { name: tNav("categories"), path: "/categories" },
+    ...(product.category
+      ? [{ name: product.category.name, path: `/category/${product.category.slug}` }]
+      : []),
+    { name: product.name, path: `/product/${product.slug}` },
+  ];
+
   return (
     <main
       id="content"
       /* pb-24 on mobile clears the fixed LINE bar so it never covers the last row. */
       className="mx-auto max-w-(--container-site) px-4 py-12 pb-24 md:px-6 md:pb-12"
     >
+      {/* §10 names Product and BreadcrumbList; both describe this page. */}
+      <JsonLd
+        data={[
+          productJsonLd({
+            base,
+            locale,
+            name: product.name,
+            description: product.shortDesc ?? undefined,
+            path: `/product/${product.slug}`,
+            images: product.images.map((image) =>
+              ogImageForStorageKey(image.storageKey, image.width),
+            ),
+            sku: product.sku ?? undefined,
+            price: product.price ?? undefined,
+            priceDisplay: product.priceDisplay,
+            categoryName: product.category?.name,
+          }),
+          breadcrumbJsonLd(base, locale, crumbs),
+        ]}
+      />
+
       <Breadcrumbs
         items={[
           { href: "/", label: tNav("home") },

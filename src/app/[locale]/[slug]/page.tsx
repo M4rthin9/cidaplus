@@ -5,6 +5,9 @@ import { getCachedSetting } from "@/lib/settings/cached";
 import { goLinePath } from "@/lib/line";
 import { HOME_PAGE_KEY, getPageBySlug } from "@/lib/pages/store";
 import { loadSectionData } from "@/lib/sections/data";
+import { publicMetadata } from "@/lib/seo/metadata";
+import { JsonLd, breadcrumbJsonLd } from "@/lib/seo/jsonld";
+import { assertEnv } from "@/lib/env";
 import { Sections } from "@/components/sections/render";
 import { Breadcrumbs } from "@/components/site/breadcrumbs";
 
@@ -25,10 +28,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug } = await params;
   const page = await getPageBySlug(decodeURIComponent(slug), locale);
   if (!page) return {};
-  return {
+  return publicMetadata({
+    locale,
+    paths: `/${page.slug}`,
     title: page.seoTitle ?? page.title,
     description: page.seoDescription ?? undefined,
-  };
+  });
 }
 
 export default async function CmsPage({ params }: Props) {
@@ -51,6 +56,13 @@ export default async function CmsPage({ params }: Props) {
 
   return (
     <main id="content">
+      <JsonLd
+        data={breadcrumbJsonLd(assertEnv().NEXT_PUBLIC_SITE_URL, locale, [
+          { name: t("home"), path: "/" },
+          { name: page.title, path: `/${page.slug}` },
+        ])}
+      />
+
       <div className="mx-auto max-w-(--container-site) px-4 pt-12 md:px-6">
         <Breadcrumbs items={[{ href: "/", label: t("home") }, { label: page.title }]} />
         <h1 className="text-3xl font-semibold md:text-[40px]">{page.title}</h1>
