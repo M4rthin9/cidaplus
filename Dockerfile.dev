@@ -7,8 +7,10 @@ RUN corepack enable
 WORKDIR /app
 
 # Dependencies are installed into the image so a bind-mounted source tree does
-# not need a populated node_modules on the host.
-COPY package.json pnpm-lock.yaml* ./
+# not need a populated node_modules on the host. pnpm-workspace.yaml carries
+# the allowBuilds list (@swc/core, esbuild, etc.) without which pnpm skips
+# their install scripts and lazily downloads native binaries at runtime.
+COPY package.json pnpm-lock.yaml* pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile || pnpm install
 
 COPY . .
