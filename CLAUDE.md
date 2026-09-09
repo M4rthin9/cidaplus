@@ -430,6 +430,16 @@ upload, originals over the threshold are dropped, and the admin dashboard shows 
 
 **Phase 11**
 
+- **Dev-mode upload hangs are not disk problems; they are the webpack watcher wedging under
+  Docker Desktop Windows.** `WATCHPACK_POLLING=true` + a bind mount eventually drives the dev
+  server to where `/api/health` takes 100–200s and server-action responses die mid-stream
+  (`SyntaxError: Unexpected end of JSON input page: '/admin/media'`), which leaves
+  `useActionState` stuck in `pending` and the upload button disabled forever. Diagnosed rule of
+  thumb: run `docker ps --filter name=cidaplus-dev-web-1` — if `unhealthy` or a host-side
+  `http://localhost:3000/api/health` curl exceeds ~30s, `docker restart cidaplus-dev-web-1` fixes
+  it (the `media`/`pgdata` volumes survive; the wedge is process state, not data). Validated the
+  pipeline through the real UI afterwards: a 1600px JPEG upload wrote the DB row and every
+  derivative to `media` correctly. The `media` volume and its permissions were never the cause.
 - **`.dockerignore` needs `**/.env`, not `.env`.** A bare pattern is anchored to the context root,
   so it excludes `./.env` and nothing else — and phase 0 established that `next build` writes
   `.next/standalone/.env`. Verified the file is produced by every local build, so an image built
