@@ -1,0 +1,12 @@
+# Normalise line endings: the repository stores LF, working copies may be CRLF.
+# Without this, `prettier --check` on a Windows checkout false-fails every file
+# (218 of them in the phase-11 pass) while CI passes clean.
+* text=auto eol=lf
+
+# Windows-native scripts keep CRLF so cmd.exe runs them untouched.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Generated / vendored — line endings and whitespace are noise.
+*.lock text eol=lf
+*.json text eol=lf
