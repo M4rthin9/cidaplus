@@ -427,3 +427,50 @@ upload, originals over the threshold are dropped, and the admin dashboard shows 
 - The app icons are **provisional downscales of the seal** (§14 decision 27), which is the treatment
   docs/DESIGN.md forbids, accepted deliberately because shipping none meant a 404 on every page load.
   Re-running `scripts/build-brand-assets.ts` replaces all six once a drawn mark exists.
+
+**Phase 11**
+
+- **`.dockerignore` needs `**/.env`, not `.env`.** A bare pattern is anchored to the context root,
+  so it excludes `./.env` and nothing else — and phase 0 established that `next build` writes
+  `.next/standalone/.env`. Verified the file is produced by every local build, so an image built
+  from a checkout with a `.env` present would have shipped it. The release workflow asserts both
+  paths are absent as well, because a `.dockerignore` fix is one careless edit from being undone.
+- **`trusted_proxies cloudflare` is not in stock Caddy.** `caddy:2.10-alpine` refuses to start with
+  "module not registered: http.ip_sources.cloudflare" — that directive needs the
+  caddy-dynamic-clientip plugin and therefore a custom build. Instead `scripts/cloudflare-ips.sh`
+  fetches the ranges on the box and writes `caddy/cloudflare-ips.caddy` holding a
+  `trusted_proxies static` line, imported from the global `servers` block. The ranges are
+  **generated, never committed** (`/caddy/` and `/certs/` are gitignored): a hand-transcribed list is
+  a security defect in both directions — too narrow loses visitor IPs, too wide lets anyone spoof
+  `CF-Connecting-IP`. The same fetch feeds the ufw rules.
+- **The trust boundary is real, and testable without Cloudflare.** With `127.0.0.1/32` in the
+  snippet a request carrying `CF-Connecting-IP: 203.0.113.7` logs `client_ip=203.0.113.7`,
+  `remote_ip=127.0.0.1`; with it removed the identical request logs `client_ip=127.0.0.1`. That is
+  the whole mechanism §11 asks for, verified locally against real Caddy 2.10.2.
+- **`admin off` means there is no `caddy reload`.** The admin API is the only way to reload, so
+  every config change on the box is a container restart (`docker compose restart caddy`) — noted in
+  the RUNBOOK. Cost us a confusing "dial tcp 127.0.0.1:2019: connection refused" mid-test.
+- **Caddy's media mount is `/srv/media`, not `/data/media` as everywhere else.** `/data` is Caddy's
+  own storage volume; nesting the media volume inside it makes the two mounts order-dependent for
+  no benefit. The web and backup containers keep `/data/media`, which is what `MEDIA_DIR` points at.
+- **`output: "standalone"` verified negatively as well as positively.** With the two extra
+  `COPY` lines for `.next/static` and `public/`, every route serves 200 with CSS, fonts and favicon;
+  without them the app runs unhydrated and all three 404. Phase 3 predicted this; the Dockerfile is
+  where it is finally load-bearing.
+- **The backup writes to `.partial` and renames.** A `pg_dump` killed halfway leaves a file that
+  looks like a backup and restores as garbage; an atomic rename means every file in `daily/` is
+  either complete or absent. Retention is **counted by file, not by mtime**, so a clock jump or a
+  missed night cannot empty the directory. Round-trip verified for real: identical row counts across
+  9 tables, 22 tables / 33 indexes / 29 FKs on both sides, media byte-identical.
+- **`restore.sh` refuses a populated target unless `FORCE=1`.** The one command in this repo that
+  destroys data should not be one typo away from running, and a restore is exactly the moment
+  somebody is panicking.
+- **`line_clicks` pruning lives in the nightly backup job**, not a separate cron — §6's 30-day
+  retention had no enforcement after phase 8. It reads psql's command tag to report the row count,
+  so the log says what it deleted rather than that it ran.
+- The Origin Certificate is a 15-year cert from the Cloudflare dashboard (§14 decision 30), so
+  renewal is a calendar entry rather than a cron job. ACME is off entirely (`auto_https off`):
+  HTTP-01 is unreliable behind an orange cloud and DNS-01 would put an API token on the box.
+- **Half of §12's phase-11 verification cannot be run here** — there is no VPS, no DNS control and
+  no reachable Cloudflare account. The origin-side mechanism is verified locally as above; "cidapt.com
+  serves over Full (strict)" is a first-deploy check, and the RUNBOOK carries it as one.

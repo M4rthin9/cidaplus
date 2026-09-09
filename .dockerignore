@@ -1,9 +1,26 @@
+# The production image copies a prebuilt standalone output, so the source tree
+# is not part of its context — but Dockerfile.dev bind-mounts it, so this list
+# has to stay accurate for both.
 node_modules
-.next
 .git
+.github
+
+# Never into an image. `next build` copies a .env from the working directory
+# into `.next/standalone/.env` and the standalone server loads it from there
+# (measured in phase 0). A bare `.env` pattern only matches the context root, so
+# the *copy* Next made inside the standalone output would still be packaged —
+# verified: it is present after every local build. `**/.env` is what excludes it.
 .env
 .env.*
+**/.env
+**/.env.*
 !.env.example
+
 coverage
 docs
+assets
 *.log
+
+# The build output is copied explicitly by path in the Dockerfile; excluding the
+# rest of .next keeps the cache and the dev server's artefacts out of the context.
+.next/cache
