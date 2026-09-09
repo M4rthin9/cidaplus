@@ -64,7 +64,7 @@ file or shell history.
 
 ```powershell
 # PowerShell: env var first, then the .cmd shim
-$env:ADMIN_PASSWORD='watdafuck'
+$env:ADMIN_PASSWORD='set-a-strong-password'
 $env:DATABASE_URL='postgres://cidapt:cidapt_dev@localhost:5432/cidapt'
 pnpm.cmd admin:create admin@cidapt.com "ผู้ดูแลระบบ" owner
 ```
