@@ -36,6 +36,7 @@ export async function mediaPickerItems() {
       blurhash: media.blurhash,
       focalX: media.focalX,
       focalY: media.focalY,
+      width: media.width,
       alt: mediaI18n.alt,
     })
     .from(media)

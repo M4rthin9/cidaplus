@@ -93,6 +93,12 @@ export const productSchema = z
       "ราคาต้องเป็นตัวเลข",
     ),
     sku: optionalString(64, "รหัสสินค้ายาวเกินไป"),
+    /**
+     * Overrides `settings.line.messageTemplate` for this product alone
+     * (SPEC.md §8 item 3). Same placeholders; empty means "use the site default",
+     * which is why it goes through optionalString rather than being stored as "".
+     */
+    lineMessageOverride: optionalString(500, "ข้อความยาวเกินไป"),
     isFeatured: z.boolean(),
     mediaIds: z.array(z.string()).max(20, "เลือกรูปได้ไม่เกิน 20 รูป").default([]),
     ...publishFields,

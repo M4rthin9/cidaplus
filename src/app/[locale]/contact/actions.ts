@@ -1,14 +1,13 @@
 "use server";
 
-import { createHmac } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { getLocale, getTranslations } from "next-intl/server";
 import { db } from "@/db/client";
 import { contactMessages } from "@/db/schema";
 import { writeAudit } from "@/lib/audit";
-import { assertEnv } from "@/lib/env";
 import { sendMail } from "@/lib/mail";
+import { pepperedHash } from "@/lib/privacy";
 import { TokenBucket } from "@/lib/rate-limit";
 import { getSetting } from "@/lib/settings/store";
 import {
@@ -29,16 +28,6 @@ declare global {
 const rateLimit: TokenBucket =
   globalThis.__cidaContactRateLimit ??
   (globalThis.__cidaContactRateLimit = new TokenBucket(5, 1 / 120));
-
-/**
- * A salted hash, never a raw IP (PDPA — SPEC.md §10, and the column comment on
- * `contact_messages.ip_hash`). `AUTH_SECRET` is the pepper: it already exists,
- * is already secret, and rotating it invalidates the hashes, which for an
- * abuse-tracking value is the correct behaviour rather than a loss.
- */
-function hashIp(ip: string): string {
-  return createHmac("sha256", assertEnv().AUTH_SECRET).update(ip).digest("hex").slice(0, 64);
-}
 
 async function clientIp(): Promise<string> {
   const h = await headers();
@@ -118,7 +107,7 @@ export async function submitContactAction(
           body: parsed.data.body,
           locale,
           sourcePath: sourcePath.slice(0, 512),
-          ipHash: hashIp(ip),
+          ipHash: pepperedHash(ip),
         })
         .returning({ id: contactMessages.id });
 

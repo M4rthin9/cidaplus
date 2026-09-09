@@ -5,31 +5,31 @@ import { useTranslations } from "next-intl";
 import { Link, usePathname } from "@/i18n/navigation";
 import { LanguageSwitcher } from "./language-switcher";
 import { LineLink } from "./line-link";
+import { MenuLink } from "./menu-link";
 import type { EnabledLocale } from "@/lib/public/locales";
-
-export type NavCategory = { slug: string; name: string };
+import type { MenuItems } from "@/lib/menus/schema";
 
 /**
- * Primary navigation. §10: "nav dropdowns operable without a mouse;
- * `aria-current` on active nav items".
+ * Primary navigation, driven by the header menu (SPEC.md §5, `/admin/menus`).
  *
- * The category dropdown is a real button with `aria-expanded` and
+ * The items come from `menu_i18n` when the operator has saved one and from the
+ * site's shipped default otherwise — `SiteHeader` decides which, so this
+ * component has one code path either way.
+ *
+ * §10: "nav dropdowns operable without a mouse; `aria-current` on active nav
+ * items". An item with children is a real button with `aria-expanded` and
  * `aria-controls` rather than a hover-only panel — a hover menu is unreachable
  * by keyboard and unusable on touch. Escape closes it and returns focus to the
  * trigger; a click outside closes it too.
- *
- * The links are fixed for now. §5's menu builder (`/admin/menus`) is phase 9;
- * when it lands, the items come from `menu_i18n` and this component takes them
- * as a prop instead of naming them.
  */
 export function SiteNav({
-  categories,
+  items,
   locales,
   lineHref,
   lineLabel,
   pathsByLocale,
 }: {
-  categories: NavCategory[];
+  items: MenuItems;
   locales: EnabledLocale[];
   lineHref: string;
   lineLabel: string;
@@ -38,30 +38,29 @@ export function SiteNav({
   const t = useTranslations("nav");
   const pathname = usePathname();
 
-  const [openMenu, setOpenMenu] = useState(false);
+  const [openId, setOpenId] = useState<string | null>(null);
   const [openDrawer, setOpenDrawer] = useState(false);
-  const menuId = useId();
   const drawerId = useId();
-  const menuTrigger = useRef<HTMLButtonElement>(null);
-  const menuWrap = useRef<HTMLDivElement>(null);
+  const wrap = useRef<HTMLDivElement>(null);
 
   // Route change closes everything — otherwise the drawer stays over the new page.
   useEffect(() => {
-    setOpenMenu(false);
+    setOpenId(null);
     setOpenDrawer(false);
   }, [pathname]);
 
   useEffect(() => {
-    if (!openMenu) return;
+    if (!openId) return;
 
     function onKey(event: KeyboardEvent) {
       if (event.key !== "Escape") return;
-      setOpenMenu(false);
-      menuTrigger.current?.focus();
+      const trigger = document.getElementById(`menu-trigger-${openId}`);
+      setOpenId(null);
+      trigger?.focus();
     }
     function onPointer(event: MouseEvent) {
-      if (menuWrap.current?.contains(event.target as Node)) return;
-      setOpenMenu(false);
+      if (wrap.current?.contains(event.target as Node)) return;
+      setOpenId(null);
     }
 
     document.addEventListener("keydown", onKey);
@@ -70,77 +69,64 @@ export function SiteNav({
       document.removeEventListener("keydown", onKey);
       document.removeEventListener("mousedown", onPointer);
     };
-  }, [openMenu]);
+  }, [openId]);
 
-  const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
+  const isActive = (href: string) =>
+    href === "/" ? pathname === "/" : href.startsWith("/") && pathname.startsWith(href);
 
   const linkClass = (href: string) =>
     isActive(href)
       ? "text-sm font-medium text-(--color-brand)"
       : "text-sm text-(--color-text) hover:text-(--color-brand)";
 
-  const links = [
-    { href: "/", label: t("home") },
-    { href: "/news", label: t("news") },
-    { href: "/contact", label: t("contact") },
-  ];
-
   return (
     <>
-      <nav aria-label={t("primary")} className="hidden items-center gap-6 lg:flex">
-        <Link href="/" aria-current={isActive("/") ? "page" : undefined} className={linkClass("/")}>
-          {t("home")}
-        </Link>
-
-        <div ref={menuWrap} className="relative">
-          <button
-            ref={menuTrigger}
-            type="button"
-            aria-expanded={openMenu}
-            aria-controls={menuId}
-            onClick={() => setOpenMenu((v) => !v)}
-            className={`flex items-center gap-1 ${linkClass("/categor")}`}
-          >
-            {t("categories")}
-            <span aria-hidden="true" className="text-[10px]">
-              ▾
-            </span>
-          </button>
-
-          {openMenu && (
-            <div
-              id={menuId}
-              className="absolute start-0 top-full z-20 mt-2 min-w-56 rounded-(--radius-card) border border-(--color-border) bg-(--color-bg) py-2"
-            >
-              <Link
-                href="/categories"
-                className="block px-4 py-2.5 text-sm text-(--color-text) hover:bg-(--color-surface) hover:text-(--color-brand)"
+      <nav aria-label={t("primary")} className="hidden items-center gap-6 lg:flex" ref={wrap}>
+        {items.map((item) =>
+          item.children.length > 0 ? (
+            <div key={item.id} className="relative">
+              <button
+                id={`menu-trigger-${item.id}`}
+                type="button"
+                aria-expanded={openId === item.id}
+                aria-controls={`menu-panel-${item.id}`}
+                onClick={() => setOpenId((current) => (current === item.id ? null : item.id))}
+                className={`flex items-center gap-1 ${linkClass(item.href)}`}
               >
-                {t("categories")}
-              </Link>
-              {categories.map((category) => (
-                <Link
-                  key={category.slug}
-                  href={`/category/${category.slug}`}
-                  className="block px-4 py-2.5 text-sm text-(--color-text) hover:bg-(--color-surface) hover:text-(--color-brand)"
-                >
-                  {category.name}
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
+                {item.label}
+                <span aria-hidden="true" className="text-[10px]">
+                  ▾
+                </span>
+              </button>
 
-        {links.slice(1).map((link) => (
-          <Link
-            key={link.href}
-            href={link.href}
-            aria-current={isActive(link.href) ? "page" : undefined}
-            className={linkClass(link.href)}
-          >
-            {link.label}
-          </Link>
-        ))}
+              {openId === item.id && (
+                <div
+                  id={`menu-panel-${item.id}`}
+                  className="absolute start-0 top-full z-20 mt-2 min-w-56 rounded-(--radius-card) border border-(--color-border) bg-(--color-bg) py-2"
+                >
+                  <MenuLink
+                    item={item}
+                    className="block px-4 py-2.5 text-sm text-(--color-text) hover:bg-(--color-surface) hover:text-(--color-brand)"
+                  />
+                  {item.children.map((child) => (
+                    <MenuLink
+                      key={child.id}
+                      item={child}
+                      className="block px-4 py-2.5 text-sm text-(--color-text) hover:bg-(--color-surface) hover:text-(--color-brand)"
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <MenuLink
+              key={item.id}
+              item={item}
+              aria-current={isActive(item.href) ? "page" : undefined}
+              className={linkClass(item.href)}
+            />
+          ),
+        )}
 
         <Link href="/search" className={linkClass("/search")}>
           {t("search")}
@@ -168,31 +154,21 @@ export function SiteNav({
           className="w-full border-t border-(--color-border) py-3 lg:hidden"
         >
           <ul className="flex flex-col">
-            <li>
-              <Link href="/" className="block py-2.5 text-sm text-(--color-text)">
-                {t("home")}
-              </Link>
-            </li>
-            <li>
-              <Link href="/categories" className="block py-2.5 text-sm text-(--color-text)">
-                {t("categories")}
-              </Link>
-            </li>
-            {categories.map((category) => (
-              <li key={category.slug}>
-                <Link
-                  href={`/category/${category.slug}`}
-                  className="block py-2.5 ps-4 text-sm text-(--color-text-muted)"
-                >
-                  {category.name}
-                </Link>
-              </li>
-            ))}
-            {links.slice(1).map((link) => (
-              <li key={link.href}>
-                <Link href={link.href} className="block py-2.5 text-sm text-(--color-text)">
-                  {link.label}
-                </Link>
+            {items.map((item) => (
+              <li key={item.id}>
+                <MenuLink item={item} className="block py-2.5 text-sm text-(--color-text)" />
+                {item.children.length > 0 && (
+                  <ul>
+                    {item.children.map((child) => (
+                      <li key={child.id}>
+                        <MenuLink
+                          item={child}
+                          className="block py-2.5 ps-4 text-sm text-(--color-text-muted)"
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </li>
             ))}
             <li>

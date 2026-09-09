@@ -485,14 +485,26 @@ Answered — treat these as settled, not as open questions.
 | 22 | **Two root layouts: the storefront's is `app/[locale]/layout.tsx`, the admin's is `app/(admin)/layout.tsx`.** docs/DESIGN.md requires `lang` and `dir` set per locale "from day one, even with one locale enabled", and a layout above a dynamic segment never receives that segment's params — a single shared root could only have got `lang` right by reading the request path and going dynamic on every page. Route URLs are unchanged; the admin keeps `lang="th"`, which is correct since §9 makes the admin Thai-only. Settled 2026-09-08. |
 | 23 | **The affiliation is a footer credit line, not a link,** and phone, address and LINE carry equal weight. Both were open questions under "Raised by the seal". A link on every page would send visitors to the parent agency from the footer, and a credit states the affiliation without claiming to speak for กรมราชทัณฑ์. On channels: a public-sector body cannot make a chat app the only way to reach it — a visitor with no LINE account would have no channel — so §8's LINE-only posture is relaxed to LINE-plus-equals on the footer and `/contact`, while LINE stays the primary CTA on a product page. Settled 2026-09-08. |
 
+| 24 | **The CMS-managed static pages ship with the section builder,** at `/[locale]/[slug]`. §5 lists `/about`, `/how-to-order`, `/privacy-policy` and `/cookies-policy` as public routes and §12 names `/admin/pages` only under phase 9, so no other phase touches the `pages` table — without the route, the admin would let an operator build an About page no visitor could reach. It reuses the homepage's section renderer, so it costs one route file. Static segments (`/news`, `/contact`, `/search`, `/categories`) are matched by Next ahead of it. Settled 2026-09-08. |
+| 25 | **The homepage and the menus fall back to what the site shipped with, not to nothing.** With no `home` row the homepage renders the phase-7 composition; with no `menus` row the header renders its fixed links plus the live category dropdown, which a hand-written menu cannot reproduce. Saving either takes over completely. A fresh deployment therefore serves a correct site before anyone opens the admin, and the "leave it alone for automatic categories, save it for a fixed order" choice is explicit rather than accidental. Settled 2026-09-08. |
+| 26 | **Operator-typed links accept an internal path or an `https://` URL and nothing else** — the same `linkHref` rule for menu items and for section CTAs. A `javascript:` href in a menu is stored XSS with an audit trail, and plain `http` on a government site is a downgrade. Menu nesting is capped at one level of children, matching the header's single dropdown row; a third level is stripped rather than rejected, so surplus depth costs the operator that level and nothing else, while a bad `href` takes its item with it. Settled 2026-09-08. |
+
+| 27 | **The app icons ship provisional, downscaled from the seal.** docs/DESIGN.md asks for a simplified mark drawn on purpose at icon sizes and none exists — it is blocked on the authoritative SVG master (§14 still-open 1) — while shipping none at all meant a 404 on every page load and a Lighthouse Best Practices point. `scripts/build-brand-assets.ts` generates `favicon.ico` (16/32/48), `apple-touch-icon.png`, `icon-192`, `icon-512` and `icon-maskable-512`; re-running it after the real mark lands replaces all six. The OG image is *not* provisional: DESIGN.md specifies it as the seal plus the institution name, which is a composition rather than a redrawn mark. Settled 2026-09-08. |
+| 28 | **`robots.txt` refuses everything while `settings.seo.allowIndexing` is off,** which is the shipping default, and omits the `Sitemap:` line with it. `sitemap.xml` is still served either way — it costs nothing and makes the hreflang graph testable before launch. When indexing is on, `/admin`, `/api/`, `/search` and `/go/line` are disallowed: a crawler following the tracked LINE redirect would write `line_clicks` rows that look like enquiries and corrupt the only conversion signal the business has. Settled 2026-09-08. |
+| 29 | **hreflang covers only the locales that are switched on,** and `x-default` points at Thai. Emitting an alternate for a locale whose `locales` row is disabled would hand a crawler a 404 — the alternates have to agree with §14 decision 9, not with the routing table. Verified reciprocal across all three locales with distinct per-locale slugs. The GA4 event §8 item 5 asks for on a LINE click now fires too, as one delegated listener inside the consent-gated analytics script, because §10 forbids analytics before PDPA consent and phase 8 had no consent to gate on. Settled 2026-09-08. |
+
+| 30 | **Origin TLS is a Cloudflare Origin Certificate, not ACME.** §11 offered either that or Caddy's DNS-01 challenge and asked for one to be picked and documented. The Origin Certificate needs no API token on the box, no Caddy build carrying the Cloudflare DNS plugin, and nothing that can fail at renewal time; it is trusted only by Cloudflare, which is correct because §11's firewall rule already means nothing else may reach the origin. `auto_https off` in the Caddyfile makes that explicit — no ACME account is created. The cost is a 15-year expiry nobody will remember, so the runbook says to put it in a calendar. Settled 2026-09-09. |
+| 31 | **The production image is built in CI and packages a prebuilt standalone output; it does not build the app.** §2 forbids building on the VPS, and `next build` prerenders pages that read the catalog, so it needs a database — visible to a CI *job* through a service container but not to an isolated `docker build`. Building in the job and copying the result into a runtime-only Dockerfile avoids threading a database into the image build at all. `.github/workflows/release.yml` is the only supported producer. Settled 2026-09-09. |
+
 ### Still open — ask before the phase that needs them
 
 1. ~~**Logo master dimensions, alpha channel, and edge quality.**~~ **Answered 2026-09-07.**
    The file is committed at `public/brand/cida-logo.png`: **5906 × 5906px**, RGBA with real
    transparency, 37px (0.6%) of trimmable margin, clean anti-aliased edges, 7.5 MB. Measured
    colours corrected the palette — see `docs/DESIGN.md` → "Verified". An authoritative **SVG master
-   is still worth requesting** for print, signage and the simplified favicon mark, but nothing is
-   blocked on it.
+   is still worth requesting** for print, signage and the simplified favicon mark. Since phase 10 the
+   icons ship as provisional downscales of the seal (§14 decision 27), so nothing is blocked — but
+   they are muddy at 16px exactly as DESIGN.md predicts, and replacing them is one script run.
 
 2. **Who writes English and Chinese, if either is ever switched on.** Deferred with decision 9, not
    resolved. Nobody should machine-translate product names without a human sign-off; decide who that
@@ -510,11 +522,9 @@ Answered — treat these as settled, not as open questions.
 
 - ~~**Does the site need to state its affiliation formally**~~ and ~~**is a LINE Official Account
   acceptable as the sole enquiry channel**~~ — both answered in phase 7, decision 23 above.
-- **An authoritative SVG master of the seal is still outstanding** (§14 still-open 1). It blocks the
-  favicon, the maskable icon and the OG image, because docs/DESIGN.md requires a *simplified mark
-  drawn on purpose* for those sizes rather than a downscale of the full seal — the two rings of Thai
-  microtext become noise below ~96px. The site therefore ships with no favicon and Lighthouse Best
-  Practices sits at 96 rather than 100 for the one missing-resource audit. Phase 10 owns the icons.
+- ~~**An authoritative SVG master of the seal is still outstanding**~~ — still true, but no longer
+  blocking: phase 10 ships provisional seal-derived icons and a composed OG image (§14 decision 27).
+  The request stands for print, signage and a properly drawn small-size mark.
 - **WCAG 2.0 AA is effectively mandatory** for Thai public-sector sites, which turns §10's Lighthouse
   Accessibility ≥ 95 from a target into a compliance floor. The palette in `docs/DESIGN.md` now
   clears it; keep every future token above 4.5:1 for normal text.

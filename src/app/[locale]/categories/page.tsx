@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { publishedCategories } from "@/lib/public/queries";
+import { publicMetadata } from "@/lib/seo/metadata";
 import { MediaPlaceholder, MediaThumb } from "@/components/media/media-thumb";
 import { Breadcrumbs } from "@/components/site/breadcrumbs";
 import { SectionHeading } from "@/components/site/section-heading";
@@ -15,7 +16,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "nav" });
-  return { title: t("categories") };
+  return publicMetadata({ locale, paths: "/categories", title: t("categories") });
 }
 
 export default async function CategoriesPage({ params }: { params: Promise<{ locale: string }> }) {

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { getCachedSetting } from "@/lib/settings/cached";
-import { addFriendUrl } from "@/lib/line";
+import { publicMetadata } from "@/lib/seo/metadata";
+import { goLinePath } from "@/lib/line";
 import { Breadcrumbs } from "@/components/site/breadcrumbs";
 import { LineLink } from "@/components/site/line-link";
 import { SectionHeading } from "@/components/site/section-heading";
@@ -16,7 +17,12 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "contact" });
-  return { title: t("title"), description: t("intro") };
+  return publicMetadata({
+    locale,
+    paths: "/contact",
+    title: t("title"),
+    description: t("intro"),
+  });
 }
 
 export default async function ContactPage({ params }: { params: Promise<{ locale: string }> }) {
@@ -93,7 +99,7 @@ export default async function ContactPage({ params }: { params: Promise<{ locale
               <dt className="text-sm text-(--color-text-muted)">{t("line")}</dt>
               <dd className="col-span-2">
                 <p className="lat text-(--color-text)">{tLine("handle", { id: line.oaId })}</p>
-                <LineLink href={addFriendUrl(line.oaId)} className="mt-3">
+                <LineLink href={goLinePath()} className="mt-3">
                   {tLine("openAccount")}
                 </LineLink>
               </dd>

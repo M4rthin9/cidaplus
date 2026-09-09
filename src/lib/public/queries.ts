@@ -51,10 +51,12 @@ const postIsLive = and(
 
 const categoryIsLive = and(eq(categories.isPublished, true), isNull(categories.deletedAt));
 
-export type PublicMedia = ThumbMedia & { alt: string | null };
+export type PublicMedia = ThumbMedia & { alt: string | null; width: number | null };
 
 export type ProductCardData = {
   id: string;
+  /** Carried so the admin preview can apply a block's category filter exactly. */
+  categoryId: string;
   slug: string;
   name: string;
   price: string | null;
@@ -116,6 +118,7 @@ async function primaryImages(
       blurhash: media.blurhash,
       focalX: media.focalX,
       focalY: media.focalY,
+      width: media.width,
     })
     .from(productMedia)
     .innerJoin(media, eq(media.id, productMedia.mediaId))
@@ -136,7 +139,12 @@ async function primaryImages(
 }
 
 async function toProductCards(
-  rows: { id: string; price: string | null; priceDisplay: ProductCardData["priceDisplay"] }[],
+  rows: {
+    id: string;
+    categoryId: string;
+    price: string | null;
+    priceDisplay: ProductCardData["priceDisplay"];
+  }[],
   locale: string,
 ): Promise<ProductCardData[]> {
   if (rows.length === 0) return [];
@@ -163,6 +171,7 @@ async function toProductCards(
     if (!t) continue;
     cards.push({
       id: row.id,
+      categoryId: row.categoryId,
       slug: t.row.slug,
       name: t.row.name,
       price: row.price,
@@ -173,12 +182,28 @@ async function toProductCards(
   return cards;
 }
 
-export async function featuredProducts(locale: string, limit = 8): Promise<ProductCardData[]> {
+export async function featuredProducts(
+  locale: string,
+  limit = 8,
+  categoryId?: string,
+): Promise<ProductCardData[]> {
   const rows = await db
-    .select({ id: products.id, price: products.price, priceDisplay: products.priceDisplay })
+    .select({
+      id: products.id,
+      categoryId: products.categoryId,
+      price: products.price,
+      priceDisplay: products.priceDisplay,
+    })
     .from(products)
     .innerJoin(categories, eq(categories.id, products.categoryId))
-    .where(and(productIsLive, categoryIsLive, eq(products.isFeatured, true)))
+    .where(
+      and(
+        productIsLive,
+        categoryIsLive,
+        eq(products.isFeatured, true),
+        categoryId ? eq(products.categoryId, categoryId) : undefined,
+      ),
+    )
     .orderBy(asc(products.sortOrder))
     .limit(limit);
 
@@ -238,7 +263,7 @@ export async function publishedCategories(locale: string): Promise<CategoryCardD
   return out;
 }
 
-async function mediaByIds(ids: string[], locale: string): Promise<Map<string, PublicMedia>> {
+export async function mediaByIds(ids: string[], locale: string): Promise<Map<string, PublicMedia>> {
   if (ids.length === 0) return new Map();
 
   const rows = await db
@@ -249,6 +274,7 @@ async function mediaByIds(ids: string[], locale: string): Promise<Map<string, Pu
       blurhash: media.blurhash,
       focalX: media.focalX,
       focalY: media.focalY,
+      width: media.width,
     })
     .from(media)
     .where(and(inArray(media.id, ids), isNull(media.deletedAt)));
@@ -351,7 +377,12 @@ export async function productsInCategory(
           : [asc(products.sortOrder)];
 
   const rows = await db
-    .select({ id: products.id, price: products.price, priceDisplay: products.priceDisplay })
+    .select({
+      id: products.id,
+      categoryId: products.categoryId,
+      price: products.price,
+      priceDisplay: products.priceDisplay,
+    })
     .from(products)
     .where(where)
     .orderBy(...order)
@@ -432,6 +463,7 @@ export async function productBySlug(
       blurhash: media.blurhash,
       focalX: media.focalX,
       focalY: media.focalY,
+      width: media.width,
       isPrimary: productMedia.isPrimary,
       sortOrder: productMedia.sortOrder,
     })
@@ -521,7 +553,12 @@ export async function relatedProducts(
   limit = 4,
 ): Promise<ProductCardData[]> {
   const rows = await db
-    .select({ id: products.id, price: products.price, priceDisplay: products.priceDisplay })
+    .select({
+      id: products.id,
+      categoryId: products.categoryId,
+      price: products.price,
+      priceDisplay: products.priceDisplay,
+    })
     .from(products)
     .where(and(productIsLive, eq(products.categoryId, categoryId), ne(products.id, excludeId)))
     .orderBy(asc(products.sortOrder))
@@ -587,7 +624,11 @@ async function toPostCards(
   return out;
 }
 
-export async function latestPosts(locale: string, limit = 3): Promise<PostCardData[]> {
+export async function latestPosts(
+  locale: string,
+  limit = 3,
+  type?: "news" | "event",
+): Promise<PostCardData[]> {
   const rows = await db
     .select({
       id: posts.id,
@@ -597,7 +638,7 @@ export async function latestPosts(locale: string, limit = 3): Promise<PostCardDa
       coverMediaId: posts.coverMediaId,
     })
     .from(posts)
-    .where(postIsLive)
+    .where(type ? and(postIsLive, eq(posts.type, type)) : postIsLive)
     .orderBy(desc(posts.publishedAt))
     .limit(limit);
 
@@ -722,6 +763,7 @@ export async function search(locale: string, query: string): Promise<SearchResul
   const productRows = await db
     .selectDistinctOn([products.id], {
       id: products.id,
+      categoryId: products.categoryId,
       price: products.price,
       priceDisplay: products.priceDisplay,
     })

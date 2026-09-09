@@ -1,8 +1,10 @@
 import { getLocale, getTranslations } from "next-intl/server";
-import { Link } from "@/i18n/navigation";
 import { getCachedSetting } from "@/lib/settings/cached";
 import { publishedCategories } from "@/lib/public/queries";
-import { addFriendUrl } from "@/lib/line";
+import { getMenuItems } from "@/lib/menus/store";
+import type { MenuItems } from "@/lib/menus/schema";
+import { MenuLink } from "./menu-link";
+import { goLinePath } from "@/lib/line";
 import { Seal } from "./seal";
 import { LineLink } from "./line-link";
 
@@ -26,12 +28,33 @@ export async function SiteFooter() {
   const tContact = await getTranslations("contact");
   const tLine = await getTranslations("line");
 
-  const [general, contact, line, categories] = await Promise.all([
+  const [general, contact, line, categories, menuA, menuB] = await Promise.all([
     getCachedSetting("general", locale),
     getCachedSetting("contact", locale),
     getCachedSetting("line", locale),
     publishedCategories(locale),
+    getMenuItems("footer_a", locale),
+    getMenuItems("footer_b", locale),
   ]);
+
+  /** As in the header: the shipped default until a menu is saved. */
+  const defaultLinks: MenuItems = [
+    {
+      id: "categories",
+      label: tNav("categories"),
+      href: "/categories",
+      target: "self",
+      children: [],
+    },
+    ...categories.slice(0, 4).map((category) => ({
+      id: category.id,
+      label: category.name,
+      href: `/category/${category.slug}`,
+      target: "self" as const,
+      children: [],
+    })),
+    { id: "news", label: tNav("news"), href: "/news", target: "self", children: [] },
+  ];
 
   const year = new Date().getFullYear();
 
@@ -51,27 +74,26 @@ export async function SiteFooter() {
             {t("links")}
           </h2>
           <ul className="mt-4 flex flex-col gap-2 text-sm">
-            <li>
-              <Link href="/categories" className="text-(--color-text) hover:text-(--color-brand)">
-                {tNav("categories")}
-              </Link>
-            </li>
-            {categories.slice(0, 4).map((category) => (
-              <li key={category.slug}>
-                <Link
-                  href={`/category/${category.slug}`}
-                  className="text-(--color-text) hover:text-(--color-brand)"
-                >
-                  {category.name}
-                </Link>
+            {(menuA ?? defaultLinks).map((item) => (
+              <li key={item.id}>
+                <MenuLink item={item} className="text-(--color-text) hover:text-(--color-brand)" />
               </li>
             ))}
-            <li>
-              <Link href="/news" className="text-(--color-text) hover:text-(--color-brand)">
-                {tNav("news")}
-              </Link>
-            </li>
           </ul>
+
+          {/* The second footer column only appears once the operator fills it. */}
+          {menuB && menuB.length > 0 && (
+            <ul className="mt-6 flex flex-col gap-2 text-sm">
+              {menuB.map((item) => (
+                <li key={item.id}>
+                  <MenuLink
+                    item={item}
+                    className="text-(--color-text) hover:text-(--color-brand)"
+                  />
+                </li>
+              ))}
+            </ul>
+          )}
         </nav>
 
         <section aria-labelledby="footer-contact">
@@ -127,7 +149,7 @@ export async function SiteFooter() {
           <p className="lat mt-4 text-sm text-(--color-text)">
             {tLine("handle", { id: line.oaId })}
           </p>
-          <LineLink href={addFriendUrl(line.oaId)} className="mt-3">
+          <LineLink href={goLinePath()} className="mt-3">
             {tLine("openAccount")}
           </LineLink>
 

@@ -6,7 +6,9 @@ import { enabledLocales } from "@/lib/public/locales";
 import { alternatePaths, withoutLocalePrefix } from "@/lib/public/alternates";
 import { LOCALES } from "@/i18n/routing";
 import { publishedCategories } from "@/lib/public/queries";
-import { addFriendUrl } from "@/lib/line";
+import { getMenuItems } from "@/lib/menus/store";
+import type { MenuItems } from "@/lib/menus/schema";
+import { goLinePath } from "@/lib/line";
 import { Seal } from "./seal";
 import { SiteNav } from "./site-nav";
 
@@ -28,15 +30,41 @@ export async function SiteHeader() {
   const tLine = await getTranslations("line");
   const tContact = await getTranslations("contact");
 
-  const [general, contact, line, locales, categories] = await Promise.all([
+  const [general, contact, line, locales, categories, savedMenu] = await Promise.all([
     getCachedSetting("general", locale),
     getCachedSetting("contact", locale),
     getCachedSetting("line", locale),
     enabledLocales(),
     publishedCategories(locale),
+    getMenuItems("header", locale),
   ]);
 
-  const lineHref = addFriendUrl(line.oaId);
+  /**
+   * The shipped default, used until the operator saves a header menu at
+   * `/admin/menus`. It carries the live category list as children, which a
+   * hand-written menu cannot — so an operator who wants an automatic category
+   * dropdown gets it by leaving the menu alone, and one who wants a fixed order
+   * gets it by saving one. Saving even a single item takes over completely.
+   */
+  const defaultMenu: MenuItems = [
+    { id: "home", label: t("home"), href: "/", target: "self", children: [] },
+    {
+      id: "categories",
+      label: t("categories"),
+      href: "/categories",
+      target: "self",
+      children: categories.map((category) => ({
+        id: category.id,
+        label: category.name,
+        href: `/category/${category.slug}`,
+        target: "self" as const,
+      })),
+    },
+    { id: "news", label: t("news"), href: "/news", target: "self", children: [] },
+    { id: "contact", label: t("contact"), href: "/contact", target: "self", children: [] },
+  ];
+
+  const lineHref = goLinePath();
 
   /**
    * The switcher needs each locale's own slug so it lands on the same product
@@ -88,7 +116,7 @@ export async function SiteHeader() {
 
         <div className="ms-auto flex w-full flex-wrap items-center justify-end gap-x-6 gap-y-3 lg:w-auto">
           <SiteNav
-            categories={categories.map((c) => ({ slug: c.slug, name: c.name }))}
+            items={savedMenu ?? defaultMenu}
             locales={locales}
             lineHref={lineHref}
             lineLabel={tLine("openAccount")}

@@ -1,8 +1,16 @@
 import Link from "next/link";
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/db/client";
-import { categories, categoryI18n, productI18n, productMedia, products } from "@/db/schema";
+import {
+  categories,
+  categoryI18n,
+  lineClicks,
+  productI18n,
+  productMedia,
+  products,
+} from "@/db/schema";
 import { requireAdmin } from "@/lib/auth/session";
+import { RETENTION_DAYS } from "@/lib/clicks";
 import { DEFAULT_LOCALE } from "@/lib/slug";
 import { Button, FormBanner } from "@/components/ui/field";
 import { ProductTable, type ProductRow } from "./product-table";
@@ -30,6 +38,12 @@ export default async function ProductsPage({
       publishedAt: products.publishedAt,
       imageCount: sql<number>`(
         select count(*)::int from ${productMedia} where ${productMedia.productId} = ${products.id}
+      )`,
+      /* Per-product click count over the retention window (SPEC.md §8 item 5). */
+      clicks: sql<number>`(
+        select count(*)::int from ${lineClicks}
+        where ${lineClicks.productId} = ${products.id}
+          and ${lineClicks.createdAt} >= now() - make_interval(days => ${RETENTION_DAYS})
       )`,
     })
     .from(products)

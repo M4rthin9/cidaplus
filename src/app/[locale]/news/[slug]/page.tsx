@@ -3,6 +3,10 @@ import { notFound } from "next/navigation";
 import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { bodyMedia, postBySlug } from "@/lib/public/queries";
+import { assertEnv } from "@/lib/env";
+import { getCachedSetting } from "@/lib/settings/cached";
+import { ogImageForStorageKey, publicMetadata } from "@/lib/seo/metadata";
+import { JsonLd, articleJsonLd, breadcrumbJsonLd } from "@/lib/seo/jsonld";
 import { RichText } from "@/lib/richtext/render";
 import { MediaThumb } from "@/components/media/media-thumb";
 import { Breadcrumbs } from "@/components/site/breadcrumbs";
@@ -15,7 +19,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug } = await params;
   const post = await postBySlug(locale, decodeURIComponent(slug));
   if (!post) return {};
-  return { title: post.title, description: post.excerpt ?? undefined };
+
+  return publicMetadata({
+    locale,
+    paths: Object.fromEntries(
+      Object.entries(post.slugsByLocale).map(([code, s]) => [code, `/news/${s}`]),
+    ),
+    title: post.title,
+    description: post.excerpt ?? undefined,
+    image: post.cover ? ogImageForStorageKey(post.cover.storageKey, post.cover.width) : undefined,
+    type: "article",
+    publishedTime: post.publishedAt,
+  });
 }
 
 export default async function PostPage({ params }: Props) {
@@ -29,9 +44,34 @@ export default async function PostPage({ params }: Props) {
   const tNav = await getTranslations("nav");
   const format = await getFormatter();
   const media = await bodyMedia(post.body, locale);
+  const base = assertEnv().NEXT_PUBLIC_SITE_URL;
+  const general = await getCachedSetting("general", locale);
 
   return (
     <main id="content" className="mx-auto max-w-(--container-site) px-4 py-12 md:px-6">
+      {/* §10 names Article for posts, alongside the breadcrumb trail. */}
+      <JsonLd
+        data={[
+          articleJsonLd({
+            base,
+            locale,
+            headline: post.title,
+            description: post.excerpt ?? undefined,
+            path: `/news/${post.slug}`,
+            image: post.cover
+              ? ogImageForStorageKey(post.cover.storageKey, post.cover.width)
+              : undefined,
+            publishedAt: post.publishedAt,
+            siteName: general.siteName,
+          }),
+          breadcrumbJsonLd(base, locale, [
+            { name: tNav("home"), path: "/" },
+            { name: t("title"), path: "/news" },
+            { name: post.title, path: `/news/${post.slug}` },
+          ]),
+        ]}
+      />
+
       <Breadcrumbs
         items={[
           { href: "/", label: tNav("home") },

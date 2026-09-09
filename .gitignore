@@ -17,3 +17,8 @@ playwright-report/
 
 .DS_Store
 *.log
+
+# Generated on the box, never committed: the Cloudflare range snippet
+# (scripts/cloudflare-ips.sh) and the Origin Certificate keypair.
+/caddy/
+/certs/

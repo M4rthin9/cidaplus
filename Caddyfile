@@ -1,0 +1,107 @@
+# Caddy, in front of the Next.js container. SPEC.md §11.
+#
+# TLS is a Cloudflare Origin Certificate (§14 decision 30): a 15-year cert
+# generated in the Cloudflare dashboard and mounted read-only at /certs. There is
+# no ACME here at all — Caddy's HTTP-01 challenge is unreliable behind an
+# orange-clouded proxy, and DNS-01 would need an API token on the box plus a
+# Caddy build carrying the Cloudflare plugin. The cert is trusted only by
+# Cloudflare, which is correct: nothing else should be able to reach the origin
+# (§11's firewall rule allows only Cloudflare ranges).
+#
+# Renewal is a calendar entry, not a cron job — see docs/RUNBOOK.md.
+{
+	# No ACME account is needed and none should be created.
+	auto_https off
+	admin off
+
+	servers {
+		# Cloudflare terminates the visitor's connection, so every request
+		# arrives from a Cloudflare IP. Without this, `client_ip` is an edge
+		# address: access logs name Cloudflare instead of the visitor, and any
+		# rate limit throttles everybody at once.
+		#
+		# The range list is generated on the box by scripts/cloudflare-ips.sh,
+		# not committed — transcribing it by hand is a security defect in either
+		# direction (too narrow loses visitor IPs, too wide lets anyone spoof
+		# CF-Connecting-IP). §11's firewall rules come from the same fetch.
+		#
+		# `trusted_proxies cloudflare` would be shorter but needs the
+		# caddy-dynamic-clientip plugin, which stock caddy:2.10-alpine does not
+		# carry — verified: it refuses to start with "module not registered:
+		# http.ip_sources.cloudflare".
+		import /etc/caddy/snippets/*.caddy
+		client_ip_headers CF-Connecting-IP X-Forwarded-For
+	}
+}
+
+# Plain HTTP exists only to redirect. Cloudflare's "Always Use HTTPS" should make
+# this unreachable in practice; it is here so a direct origin probe still behaves.
+http://cidapt.com, http://www.cidapt.com {
+	redir https://cidapt.com{uri} permanent
+}
+
+https://www.cidapt.com {
+	tls /certs/origin.pem /certs/origin.key
+	redir https://cidapt.com{uri} permanent
+}
+
+https://cidapt.com {
+	tls /certs/origin.pem /certs/origin.key
+
+	encode zstd gzip
+
+	# Uploaded media is served straight off the volume — it never touches Node.
+	# §11 has Cloudflare caching /media/* for a year, so this is a cache miss
+	# path, but a miss should still not wake the app container.
+	handle_path /media/* {
+		root * /srv/media
+		header Cache-Control "public, max-age=31536000, immutable"
+		file_server
+	}
+
+	# Next's build output is content-hashed, so it is immutable by construction.
+	handle /_next/static/* {
+		header Cache-Control "public, max-age=31536000, immutable"
+		reverse_proxy web:3000
+	}
+
+	handle /fonts/* {
+		header Cache-Control "public, max-age=31536000, immutable"
+		reverse_proxy web:3000
+	}
+
+	# sitemap.xml and robots.txt regenerate on a 1-hour window (phase 10), so a
+	# long edge cache would serve a stale URL list after content changes.
+	handle /sitemap.xml {
+		header Cache-Control "public, max-age=3600"
+		reverse_proxy web:3000
+	}
+
+	handle /robots.txt {
+		header Cache-Control "public, max-age=3600"
+		reverse_proxy web:3000
+	}
+
+	handle {
+		header {
+			# Cloudflare is already forcing HTTPS; this covers a direct origin hit.
+			Strict-Transport-Security "max-age=31536000; includeSubDomains"
+			X-Content-Type-Options "nosniff"
+			Referrer-Policy "strict-origin-when-cross-origin"
+			# The site embeds an operator-supplied map iframe (settings.contact),
+			# so framing *by* us is allowed while framing *of* us is not.
+			X-Frame-Options "SAMEORIGIN"
+			-Server
+		}
+		reverse_proxy web:3000
+	}
+
+	log {
+		output file /var/log/caddy/access.log {
+			roll_size 10mb
+			roll_keep 3
+		}
+		# The visitor's real IP, not Cloudflare's — the point of trusted_proxies.
+		format json
+	}
+}

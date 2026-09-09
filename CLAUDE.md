@@ -306,3 +306,171 @@ upload, originals over the threshold are dropped, and the admin dashboard shows 
 - Testing gotcha: matching `next-server` loosely against `/proc/*/cmdline` kills this agent's own
   shell, because the shell's command line contains the string it is searching for. Anchor it:
   `case "$c" in "next-server"*)`. Same failure mode as `pkill`, noted under phase 2.
+
+**Phase 8**
+
+- **`/go/line` lives under `[locale]`,** at `src/app/[locale]/go/line/route.ts`. §8 item 4 wants the
+  visitor's locale on every `line_clicks` row, and a route segment is the only way to get it that
+  cannot silently default — a query parameter can be dropped by whoever builds the link. Thai
+  resolves at `/go/line` and other locales at `/<locale>/go/line`, matching the as-needed prefix
+  scheme. The redirect is a **302, not a 301**: the target is derived from `settings.line`, and a
+  permanently-cached redirect would outlive the operator changing the account.
+- **`rel="noopener"`, never `noreferrer`, on the tracked LINE links.** Every LINE entry point now
+  points at `/go/line` on our own origin, so `noreferrer` buys no isolation the same-origin policy
+  does not already give — and it strips the `Referer` header, which is what §8 item 5 asks
+  `line_clicks.referrer` to record. Measured: with `noreferrer` every row stored a null referrer and
+  a useless path. The genuinely external links (Facebook, YouTube in the footer) keep both.
+- **A `Date` interpolated into a raw `sql` fragment fails at bind time.** Inside
+  `` sql`count(*) filter (where ${column} >= ${aDate})` `` drizzle has no column type to infer the
+  parameter from, so postgres.js is handed a `Date` where it wants a string and the whole query
+  throws `ERR_INVALID_ARG_TYPE`. Pass `.toISOString()` with an explicit `::timestamptz`. A `Date` in
+  `where(gte(column, date))` is fine — that path is typed by the column.
+- **Empty days come from `generate_series`, not from the chart.** A gap in a time axis is a
+  different claim from a zero, and only the database knows which days fall in the window.
+- **The dashboard chart is boxes, not SVG.** A responsive SVG has to choose between letterboxing and
+  `preserveAspectRatio="none"`, and the latter scales columns, corner radii and labels horizontally
+  — measured at 35px wide against a 24px cap, with visibly stretched type. In CSS the mark specs are
+  real pixels at every width. Verified by screenshot at 1280px and at 360px.
+- **Green on the click chart is the one sanctioned use.** docs/DESIGN.md reserves `--color-accent`
+  for the LINE handoff and nothing else, and this chart is that handoff counted. One series, so no
+  legend; the peak is the only direct label; the `<details>` table is the non-visual equivalent.
+- **The GA4 event §8 item 5 asks for is deliberately not fired.** `/go/line` is a server redirect
+  with no client to run `gtag` on, and §10 requires analytics to load only after PDPA consent, which
+  is phase 10's banner. The `line_clicks` row is the durable signal either way; phase 10 can add the
+  browser-side event once consent exists.
+- **`line_clicks` retention is still unenforced.** §6 says a nightly cron prunes past 30 days; every
+  query here already windows to `RETENTION_DAYS`, but nothing deletes. The cron is deploy tooling —
+  phase 11.
+- Testing gotcha, and the second time this has bitten: `form button[type="submit"]` in the admin
+  clicks **sign out**, because the layout's sign-out form precedes page content. Scope it —
+  `form:has(input[name="lineMessageOverride"]) button[type="submit"]`. Already recorded under phase
+  3; recorded again because the phase-3 note names a different form.
+
+**Phase 9**
+
+- **`revalidatePath("/")` does nothing for a route that lives at `/[locale]`.** The cache entry is
+  keyed by the *matched route*, not by the URL a visitor types, so a saved page sat in the database
+  while the homepage kept serving its previous render. Use the route-pattern form —
+  `revalidatePath("/[locale]", "page")`, and `revalidatePath("/[locale]", "layout")` for anything
+  the header or footer renders. Measured both ways.
+- **The section renderers must not import `server-only`.** A module with no directive is bundled
+  into whichever graph imports it, so `src/components/sections/render.tsx` renders on the server for
+  the public page *and* in the browser for the admin's live preview — the same components, which is
+  the only way a preview is honest rather than merely plausible. Nothing in a section is interactive
+  (the FAQ is `<details>`), so serving both graphs costs no public bundle.
+- **The preview loads a superset once and narrows it in the browser.** `loadPreviewBase` fetches
+  every published category, 24 featured products and 12 posts; `buildPreviewData` applies the same
+  filters `loadSectionData` applies in SQL. That is what makes dragging a block repaint with no
+  round trip. `ProductCardData` carries `categoryId` purely so the preview can apply a block's
+  category filter exactly rather than approximately.
+- **Sections and menus rebuild rather than filter,** like the rich-text whitelist. `sanitizeSections`
+  and `sanitizeMenuItems` run on write *and* on public read, so a row written by an older version of
+  the app cannot take a page down. Both structures are submitted as JSON from the builder — nested
+  ordered data does not survive flat form fields — and the JSON is untrusted input like any other.
+- **Zod strips unknown keys, so extra menu depth is dropped, not rejected.** A third level costs the
+  operator that level and nothing else; an invalid `href` is different, because that is bad data and
+  it takes its item with it. Worth knowing before writing a test that asserts rejection.
+- **`Label` in `components/ui/field.tsx` requires `htmlFor`** — a deliberate accessibility contract
+  from phase 2. Generate the id with `useId` and pass it to the control. For a control that is not a
+  single input (the media picker is a button that opens a dialog), use a styled `<p>` instead: a
+  `<label>` pointing at it would be a lie.
+- **Catalog reads do not swallow a database error the way settings reads do,** so `next build`
+  genuinely needs Postgres up — observed when the local server had stopped and the prerender of
+  `/th/contact` failed on `publishedCategories`. CI runs `db:migrate` and `db:seed` before `build`,
+  so the flow that matters is fine; the asymmetry is worth knowing before assuming a build can run
+  dry.
+- Testing gotcha, the third time: `page.locator("form").first()` in the admin is the layout's
+  **sign-out** form. Scope by content — `page.locator("form").filter({ hasText: "เมนูส่วนหัว" })` —
+  or by a field the target form owns.
+
+**Phase 10**
+
+- **The hosted validators are unreachable from this sandbox.** `search.google.com/test/rich-results`
+  and `validator.schema.org` are both refused by the egress proxy (organization policy), so §12's
+  "Rich Results test passes" was verified against Google's *documented* Product / Article /
+  BreadcrumbList / Organization requirements with a local checker, plus a HEAD request on every
+  `image` a validator would fetch. Run the hosted test once the site is publicly reachable.
+- **`Product` carries an offer only when a price is actually shown.** §10 omits
+  `offers.availability` because there is no online purchase; the offer itself is still the only way
+  to state a price, so `contact` and `hidden` products get no `offers` node at all. Inventing one
+  would be a public claim about a price nobody published — the same reasoning that keeps the price
+  line reading สอบถามราคา.
+- **The pipeline never upscales, so nothing may advertise a rendition it did not write.** A 420px
+  upload has only the 400px derivative; `MediaThumb`'s `srcSet` listed 400/800/1600 unconditionally
+  and the browser fetched an 800.avif that 404'd, which Lighthouse counted as a console error and
+  dropped Best Practices to 96. Both `MediaThumb` and the OG image helper now take the source width
+  and pick from what exists. `PublicMedia` carries `width` for exactly this.
+- **hreflang and the sitemap are generated from `locales.is_enabled`, never from the routing table.**
+  An alternate for a disabled locale is a 404 handed to a crawler. Verified reciprocal across all
+  three locales with three distinct slugs: every page advertises the identical set, every advertised
+  URL is one of the pages, and `x-default` points at Thai.
+- **Next renders `hrefLang`, not `hreflang`, in the HTML.** It is valid — HTML attribute names are
+  case-insensitive — but a case-sensitive grep or regex over the markup finds nothing and looks like
+  the tags are missing.
+- **`sitemap.xml` is a prerendered route with a 1-hour window,** so toggling a locale does not show
+  up there until it revalidates or the app is rebuilt. Whoever builds `/admin/settings/languages`
+  should `revalidatePath("/sitemap.xml")` on save.
+- **Analytics never load before consent, and the banner never renders when there is nothing to
+  consent to.** `ConsentGate` is a server component that returns null unless `settings.seo` carries a
+  GA4 or GTM id — a banner that asks permission for nothing trains people to dismiss banners. The
+  decision lives in `localStorage`, not a cookie. Verified: zero `googletagmanager` script tags
+  before consent, one after, none ever after declining, and the choice survives a reload.
+- **librsvg resolves fonts through fontconfig, which cannot read woff2.** The OG image typesets the
+  institution's name in Anuphan by pointing `FONTCONFIG_FILE` at TrueType copies in `assets/fonts`
+  (outside `public/`, regeneration documented in the README there). Without it the text silently
+  falls back to whatever Thai face the machine carries, so the image would differ per developer.
+  The script also *measures* the rendered text and scales it to fit — at a fixed size the name ran
+  off the canvas and the last glyphs were simply cut.
+- **sharp cannot write `.ico`.** The format is a 6-byte header, a 16-byte directory entry per image
+  and the PNGs themselves; `buildIco` in the brand script writes it directly rather than adding a
+  dependency to a project that pins every version.
+- The app icons are **provisional downscales of the seal** (§14 decision 27), which is the treatment
+  docs/DESIGN.md forbids, accepted deliberately because shipping none meant a 404 on every page load.
+  Re-running `scripts/build-brand-assets.ts` replaces all six once a drawn mark exists.
+
+**Phase 11**
+
+- **`.dockerignore` needs `**/.env`, not `.env`.** A bare pattern is anchored to the context root,
+  so it excludes `./.env` and nothing else — and phase 0 established that `next build` writes
+  `.next/standalone/.env`. Verified the file is produced by every local build, so an image built
+  from a checkout with a `.env` present would have shipped it. The release workflow asserts both
+  paths are absent as well, because a `.dockerignore` fix is one careless edit from being undone.
+- **`trusted_proxies cloudflare` is not in stock Caddy.** `caddy:2.10-alpine` refuses to start with
+  "module not registered: http.ip_sources.cloudflare" — that directive needs the
+  caddy-dynamic-clientip plugin and therefore a custom build. Instead `scripts/cloudflare-ips.sh`
+  fetches the ranges on the box and writes `caddy/cloudflare-ips.caddy` holding a
+  `trusted_proxies static` line, imported from the global `servers` block. The ranges are
+  **generated, never committed** (`/caddy/` and `/certs/` are gitignored): a hand-transcribed list is
+  a security defect in both directions — too narrow loses visitor IPs, too wide lets anyone spoof
+  `CF-Connecting-IP`. The same fetch feeds the ufw rules.
+- **The trust boundary is real, and testable without Cloudflare.** With `127.0.0.1/32` in the
+  snippet a request carrying `CF-Connecting-IP: 203.0.113.7` logs `client_ip=203.0.113.7`,
+  `remote_ip=127.0.0.1`; with it removed the identical request logs `client_ip=127.0.0.1`. That is
+  the whole mechanism §11 asks for, verified locally against real Caddy 2.10.2.
+- **`admin off` means there is no `caddy reload`.** The admin API is the only way to reload, so
+  every config change on the box is a container restart (`docker compose restart caddy`) — noted in
+  the RUNBOOK. Cost us a confusing "dial tcp 127.0.0.1:2019: connection refused" mid-test.
+- **Caddy's media mount is `/srv/media`, not `/data/media` as everywhere else.** `/data` is Caddy's
+  own storage volume; nesting the media volume inside it makes the two mounts order-dependent for
+  no benefit. The web and backup containers keep `/data/media`, which is what `MEDIA_DIR` points at.
+- **`output: "standalone"` verified negatively as well as positively.** With the two extra
+  `COPY` lines for `.next/static` and `public/`, every route serves 200 with CSS, fonts and favicon;
+  without them the app runs unhydrated and all three 404. Phase 3 predicted this; the Dockerfile is
+  where it is finally load-bearing.
+- **The backup writes to `.partial` and renames.** A `pg_dump` killed halfway leaves a file that
+  looks like a backup and restores as garbage; an atomic rename means every file in `daily/` is
+  either complete or absent. Retention is **counted by file, not by mtime**, so a clock jump or a
+  missed night cannot empty the directory. Round-trip verified for real: identical row counts across
+  9 tables, 22 tables / 33 indexes / 29 FKs on both sides, media byte-identical.
+- **`restore.sh` refuses a populated target unless `FORCE=1`.** The one command in this repo that
+  destroys data should not be one typo away from running, and a restore is exactly the moment
+  somebody is panicking.
+- **`line_clicks` pruning lives in the nightly backup job**, not a separate cron — §6's 30-day
+  retention had no enforcement after phase 8. It reads psql's command tag to report the row count,
+  so the log says what it deleted rather than that it ran.
+- The Origin Certificate is a 15-year cert from the Cloudflare dashboard (§14 decision 30), so
+  renewal is a calendar entry rather than a cron job. ACME is off entirely (`auto_https off`):
+  HTTP-01 is unreliable behind an orange cloud and DNS-01 would put an API token on the box.
+- **Half of §12's phase-11 verification cannot be run here** — there is no VPS, no DNS control and
+  no reachable Cloudflare account. The origin-side mechanism is verified locally as above; "cidapt.com
+  serves over Full (strict)" is a first-deploy check, and the RUNBOOK carries it as one.

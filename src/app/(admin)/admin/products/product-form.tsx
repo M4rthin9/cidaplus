@@ -18,6 +18,7 @@ export type ProductDefaults = {
   price: string;
   priceDisplay: "exact" | "from" | "contact" | "hidden";
   sku: string;
+  lineMessageOverride: string;
   isFeatured: boolean;
   publishState: "draft" | "scheduled" | "published";
   publishedAt: string;
@@ -319,6 +320,24 @@ export function ProductForm({
           <div>
             <Label htmlFor="sku">รหัสสินค้า</Label>
             <Input id="sku" name="sku" defaultValue={defaults.sku} error={state.errors?.sku} />
+          </div>
+
+          <div>
+            <Label htmlFor="lineMessageOverride">ข้อความ LINE เฉพาะสินค้านี้</Label>
+            <Input
+              id="lineMessageOverride"
+              name="lineMessageOverride"
+              defaultValue={defaults.lineMessageOverride}
+              error={state.errors?.lineMessageOverride}
+            />
+            <FieldError
+              id="lineMessageOverride-error"
+              message={state.errors?.lineMessageOverride}
+            />
+            <Hint>
+              เว้นว่างไว้เพื่อใช้ข้อความตั้งต้นจากหน้าตั้งค่า LINE ใช้ {"{product_name}"} และ{" "}
+              {"{product_url}"} แทนชื่อและลิงก์สินค้าได้
+            </Hint>
           </div>
 
           <div>

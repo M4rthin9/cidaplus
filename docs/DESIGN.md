@@ -184,6 +184,13 @@ Derivatives to generate from the master (script this, don't hand-export):
 The LINE link preview matters more than usual here — it is the image people see when the OA link gets
 forwarded, which is the site's main distribution path.
 
+**Status, phase 10.** `og-default.png` is generated as specified — the seal beside the institution
+name, typeset in Anuphan. The icon rows are **provisional**: no simplified mark exists yet, so
+`scripts/build-brand-assets.ts` currently downscales the seal for the favicon, the touch icon and the
+PWA/maskable icons. That is the treatment this file forbids, accepted deliberately and recorded as
+SPEC.md §14 decision 27, because shipping no icons meant a 404 on every page load. The rule above
+still stands: when the SVG master or a drawn mark arrives, re-run the script and this note goes away.
+
 ## Typography
 Font pair: **Anuphan** as the primary face (Thai + Latin, modern humanist sans, self-hosted woff2),
 with **Inter** as the Latin fallback and system sans below that. Anuphan reads as friendly and

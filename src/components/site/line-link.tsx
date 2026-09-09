@@ -1,8 +1,14 @@
 import { cn } from "@/lib/utils";
 
 /**
- * A LINE entry point. §8 item 7: `rel="noopener"` and `target="_blank"` on every
- * external LINE link.
+ * A LINE entry point. §8 item 7: `rel="noopener"` and `target="_blank"`.
+ *
+ * `noopener` and not `noreferrer`. Every one of these now points at `/go/line`
+ * on our own origin, so `noreferrer` would buy no isolation the same-origin
+ * policy does not already give — and it strips the `Referer` header that §8
+ * item 5 asks `line_clicks.referrer` to record, which is how the operator sees
+ * *which page* an enquiry came from. Measured: with `noreferrer` every row
+ * stored a null referrer.
  *
  * The href is always built by `src/lib/line.ts` from `settings.line.oaId`, never
  * written at a call site. Green is reserved for this handoff and nothing else
@@ -23,7 +29,7 @@ export function LineLink({
     <a
       href={href}
       target="_blank"
-      rel="noopener noreferrer"
+      rel="noopener"
       className={cn(
         // Extra vertical padding: Thai diacritics stack and touch the border at
         // Latin button padding (docs/DESIGN.md).

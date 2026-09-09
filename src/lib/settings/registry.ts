@@ -199,7 +199,16 @@ export const SETTINGS = {
     global: seoGlobal,
     globalDefault: { allowIndexing: false } as z.infer<typeof seoGlobal>,
     localized: seoLocalized,
-    localizedDefault: {} as z.infer<typeof seoLocalized>,
+    /**
+     * A description ships with the site rather than being left blank: an empty
+     * `<meta name="description">` costs a Lighthouse SEO point and, worse, lets
+     * a search engine invent the snippet. Factual, not marketing, and the
+     * operator edits it at /admin/settings/seo like anything else.
+     */
+    localizedDefault: {
+      defaultDescription:
+        "แคตตาล็อกผลิตภัณฑ์ฝีมือผู้ต้องขังจากโครงการฝึกวิชาชีพ ทัณฑสถานบำบัดพิเศษกลาง กรมราชทัณฑ์ กระทรวงยุติธรรม",
+    } as z.infer<typeof seoLocalized>,
   },
 } as const;
 

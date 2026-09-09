@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { PAGE_SIZE, publishedPosts } from "@/lib/public/queries";
+import { publicMetadata } from "@/lib/seo/metadata";
 import { Breadcrumbs } from "@/components/site/breadcrumbs";
 import { Pagination } from "@/components/site/pagination";
 import { PostCardList } from "@/components/site/post-card";
@@ -18,7 +19,7 @@ type Props = {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "news" });
-  return { title: t("title") };
+  return publicMetadata({ locale, paths: "/news", title: t("title") });
 }
 
 export default async function NewsPage({ params, searchParams }: Props) {
