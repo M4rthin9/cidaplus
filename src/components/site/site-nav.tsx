@@ -6,6 +6,7 @@ import { Link, usePathname } from "@/i18n/navigation";
 import { LanguageSwitcher } from "./language-switcher";
 import { LineLink } from "./line-link";
 import { MenuLink } from "./menu-link";
+import { SiteIcon } from "./icons";
 import type { EnabledLocale } from "@/lib/public/locales";
 import type { MenuItems } from "@/lib/menus/schema";
 
@@ -42,6 +43,19 @@ export function SiteNav({
   const [openDrawer, setOpenDrawer] = useState(false);
   const drawerId = useId();
   const wrap = useRef<HTMLDivElement>(null);
+  const drawerToggle = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!openDrawer) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpenDrawer(false);
+        drawerToggle.current?.focus();
+      }
+    };
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [openDrawer]);
 
   // Route change closes everything — otherwise the drawer stays over the new page.
   useEffect(() => {
@@ -76,12 +90,12 @@ export function SiteNav({
 
   const linkClass = (href: string) =>
     isActive(href)
-      ? "text-sm font-medium text-(--color-brand)"
-      : "text-sm text-(--color-text) hover:text-(--color-brand)";
+      ? "site-nav-link text-sm font-medium text-(--color-brand)"
+      : "site-nav-link text-sm text-(--color-text) hover:text-(--color-brand)";
 
   return (
     <>
-      <nav aria-label={t("primary")} className="hidden items-center gap-6 lg:flex" ref={wrap}>
+      <nav aria-label={t("primary")} className="hidden items-center gap-5 lg:flex" ref={wrap}>
         {items.map((item) =>
           item.children.length > 0 ? (
             <div key={item.id} className="relative">
@@ -128,8 +142,8 @@ export function SiteNav({
           ),
         )}
 
-        <Link href="/search" className={linkClass("/search")}>
-          {t("search")}
+        <Link href="/search" className="site-search" aria-label={t("search")}>
+          <SiteIcon name="search" />
         </Link>
 
         <LanguageSwitcher locales={locales} pathsByLocale={pathsByLocale} />
@@ -138,20 +152,22 @@ export function SiteNav({
       </nav>
 
       <button
+        ref={drawerToggle}
         type="button"
         aria-expanded={openDrawer}
         aria-controls={drawerId}
         onClick={() => setOpenDrawer((v) => !v)}
-        className="ms-auto rounded-(--radius-control) border border-(--color-border) px-3 py-2.5 text-sm text-(--color-text) lg:hidden"
+        className="ms-auto inline-flex items-center justify-center rounded-(--radius-control) border border-(--color-border) p-3 text-(--color-text) lg:hidden"
       >
-        {openDrawer ? t("closeMenu") : t("openMenu")}
+        <SiteIcon name={openDrawer ? "close" : "menu"} />
+        <span className="sr-only">{openDrawer ? t("closeMenu") : t("openMenu")}</span>
       </button>
 
       {openDrawer && (
         <nav
           id={drawerId}
           aria-label={t("primary")}
-          className="w-full border-t border-(--color-border) py-3 lg:hidden"
+          className="site-mobile-drawer w-full border-t border-(--color-border) py-3 lg:hidden"
         >
           <ul className="flex flex-col">
             {items.map((item) => (

@@ -16,12 +16,13 @@ export function SectionHeading({
   id?: string;
 }) {
   return (
-    <div className={cn("flex flex-wrap items-end justify-between gap-4", className)}>
+    <div
+      className={cn("section-heading flex flex-wrap items-end justify-between gap-4", className)}
+    >
       <div>
         <h2 id={id} className="text-2xl font-semibold md:text-[28px]">
           {children}
         </h2>
-        <div className="mt-3 h-0.5 w-12 rounded-full bg-(--color-brand)" aria-hidden="true" />
       </div>
       {action}
     </div>

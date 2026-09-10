@@ -168,7 +168,15 @@ export function BlockFields({
               value={block.mediaId ? [block.mediaId] : []}
               onChange={(ids) => patch({ mediaId: ids[0] ?? "" })}
             />
-            <Hint>เว้นว่างไว้เพื่อแสดงตราสัญลักษณ์ของหน่วยงาน</Hint>
+            <Hint>ภาพที่เลือกจะแสดงแทนภาพประกอบงานหัตถศิลป์</Hint>
+            <label className="mt-3 flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={block.useCraftIllustration ?? false}
+                onChange={(e) => patch({ useCraftIllustration: e.target.checked })}
+              />
+              ใช้ภาพประกอบงานหัตถศิลป์เมื่อไม่ได้เลือกภาพ
+            </label>
           </div>
         </div>
       );

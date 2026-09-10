@@ -51,6 +51,7 @@ const heroBlock = z.object({
   ),
   mediaId: text(36),
   showSeal: z.boolean().default(true),
+  useCraftIllustration: z.boolean().optional(),
 });
 
 const valuePropsBlock = z.object({

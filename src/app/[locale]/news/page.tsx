@@ -51,7 +51,10 @@ export default async function NewsPage({ params, searchParams }: Props) {
   };
 
   return (
-    <main id="content" className="mx-auto max-w-(--container-site) px-4 py-12 md:px-6">
+    <main
+      id="content"
+      className="storefront-page mx-auto max-w-(--container-site) px-4 py-12 md:px-6"
+    >
       <Breadcrumbs items={[{ href: "/", label: tNav("home") }, { label: t("title") }]} />
 
       <SectionHeading
