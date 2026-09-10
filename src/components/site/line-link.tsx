@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { SiteIcon } from "./icons";
 
 /**
  * A LINE entry point. §8 item 7: `rel="noopener"` and `target="_blank"`.
@@ -33,13 +34,14 @@ export function LineLink({
       className={cn(
         // Extra vertical padding: Thai diacritics stack and touch the border at
         // Latin button padding (docs/DESIGN.md).
-        "inline-flex items-center justify-center rounded-(--radius-control) px-4 py-2.5 text-sm font-medium",
+        "line-button inline-flex items-center justify-center rounded-(--radius-control) px-4 py-2.5 text-sm font-medium",
         variant === "solid"
           ? "bg-(--color-accent) text-white hover:opacity-90"
           : "bg-(--color-accent-tint) text-(--color-accent-ink) hover:opacity-90",
         className,
       )}
     >
+      <SiteIcon name="chat" />
       {children}
     </a>
   );

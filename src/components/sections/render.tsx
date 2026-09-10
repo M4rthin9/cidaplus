@@ -7,6 +7,7 @@ import { PostCardList } from "@/components/site/post-card";
 import { SectionHeading } from "@/components/site/section-heading";
 import { LineLink } from "@/components/site/line-link";
 import { Seal } from "@/components/site/seal";
+import { SiteIcon } from "@/components/site/icons";
 import type { SectionData } from "@/lib/sections/data";
 import type { Section, SectionsValue } from "@/lib/sections/schema";
 
@@ -26,49 +27,69 @@ const CONTAINER = "mx-auto max-w-(--container-site) px-4 md:px-6";
 
 function Hero({ block, data }: { block: Extract<Section, { type: "hero" }>; data: SectionData }) {
   const t = useTranslations("line");
+  const tHome = useTranslations("home");
   const image = block.mediaId ? data.media[block.mediaId] : undefined;
+  const hasVisual = Boolean(image || block.useCraftIllustration);
 
   return (
-    <section className="border-b border-(--color-border) bg-(--color-surface)">
-      <div
-        className={`${CONTAINER} flex flex-col items-start gap-8 py-16 md:flex-row md:items-center md:py-20`}
-      >
-        {image ? (
-          <div className="w-full md:w-2/5">
-            <MediaThumb
-              media={image}
-              aspect="cover"
-              width={800}
-              sizes="(max-width: 768px) 100vw, 460px"
-            />
-          </div>
-        ) : (
-          block.showSeal && <Seal size={140} priority className="shrink-0" />
-        )}
-
-        <div>
-          {data.organisation && (
-            <p className="text-sm text-(--color-text-muted)">{data.organisation}</p>
-          )}
-          <h1 className="mt-2 text-3xl font-semibold md:text-[40px]">
-            {block.headline ?? data.siteName}
-          </h1>
-          <div className="mt-5 h-0.5 w-16 rounded-full bg-(--color-brand)" aria-hidden="true" />
+    <section className="premium-hero">
+      <div className={`site-shell hero-layout${hasVisual ? "" : " hero-without-image"}`}>
+        <div className="hero-copy">
+          {data.organisation && <p className="hero-kicker site-eyebrow">{data.organisation}</p>}
+          <h1>{block.headline ?? data.siteName}</h1>
           {(block.body ?? data.tagline) && (
-            <p className="mt-6 max-w-prose text-(--color-text)">{block.body ?? data.tagline}</p>
+            <p className="hero-body">{block.body ?? data.tagline}</p>
           )}
-          <div className="mt-8 flex flex-wrap items-center gap-3">
+          <div className="hero-actions">
             {block.ctaLabel && block.ctaHref && (
-              <Link
-                href={block.ctaHref}
-                className="inline-flex items-center rounded-(--radius-control) bg-(--color-brand) px-5 py-2.5 text-sm font-medium text-white hover:bg-(--color-brand-hover)"
-              >
+              <Link href={block.ctaHref} className="hero-primary">
                 {block.ctaLabel}
+                <SiteIcon name="arrow" />
               </Link>
             )}
-            <LineLink href={data.lineHref}>{t("openAccount")}</LineLink>
+            <LineLink href={data.lineHref} variant="quiet">
+              {t("openAccount")}
+            </LineLink>
           </div>
+          {block.showSeal && (
+            <div className="hero-identity">
+              <Seal size={48} />
+              <div>
+                <p>{data.siteName}</p>
+                {data.organisation && <p>{data.organisation}</p>}
+              </div>
+            </div>
+          )}
         </div>
+        {hasVisual && (
+          <figure className="hero-visual">
+            <div className="hero-image">
+              {image ? (
+                <MediaThumb
+                  media={image}
+                  aspect="square"
+                  width={800}
+                  sizes="(max-width: 767px) 100vw, 560px"
+                  priority
+                />
+              ) : (
+                <picture>
+                  <img
+                    src="/images/craft-hero.webp"
+                    srcSet="/images/craft-hero-640.webp 640w, /images/craft-hero.webp 1254w"
+                    sizes="(max-width: 767px) 100vw, 560px"
+                    width={1254}
+                    height={1254}
+                    alt={tHome("craftIllustrationAlt")}
+                    loading="eager"
+                    fetchPriority="high"
+                  />
+                </picture>
+              )}
+            </div>
+            {!image && <figcaption>{tHome("craftIllustrationCaption")}</figcaption>}
+          </figure>
+        )}
       </div>
     </section>
   );
@@ -77,25 +98,21 @@ function Hero({ block, data }: { block: Extract<Section, { type: "hero" }>; data
 function ValueProps({ block }: { block: Extract<Section, { type: "value_props" }> }) {
   if (block.items.length === 0) return null;
   return (
-    <section className={`${CONTAINER} py-12`}>
-      {block.title && <SectionHeading>{block.title}</SectionHeading>}
-      <ul
-        className={
-          block.title
-            ? "mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
-            : "grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
-        }
-      >
-        {block.items.map((item, index) => (
-          <li key={index} className="flex items-start gap-3">
-            {/* Decorative: the text beside it carries the meaning. */}
-            <span aria-hidden="true" className="mt-1 text-(--color-accent)">
-              ✓
-            </span>
-            <span className="text-(--color-text)">{item.text}</span>
-          </li>
-        ))}
-      </ul>
+    <section className="value-strip">
+      <div className="site-shell">
+        {block.title && <SectionHeading>{block.title}</SectionHeading>}
+        <ul>
+          {block.items.map((item, index) => (
+            <li key={index}>
+              {/* Decorative: the text beside it carries the meaning. */}
+              <span aria-hidden="true" className="value-number">
+                {String(index + 1).padStart(2, "0")}
+              </span>
+              <span className="text-(--color-text)">{item.text}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
     </section>
   );
 }
@@ -111,7 +128,7 @@ function FeaturedProducts({
   const products = data.productsByBlock[block.id] ?? [];
 
   return (
-    <section className={`${CONTAINER} py-16`}>
+    <section className="site-shell site-section">
       <SectionHeading
         action={
           <Link
@@ -152,46 +169,42 @@ function CategoryShowcase({
       : data.categories;
 
   return (
-    <section className={`${CONTAINER} py-4`}>
-      <SectionHeading>{block.title ?? t("browseCategories")}</SectionHeading>
-      <div className="mt-8 flex flex-col gap-6">
-        {chosen.length === 0 && (
-          <p className="text-(--color-text-muted)">{tCategory("noCategories")}</p>
-        )}
-        {chosen.map((category, index) => (
-          <article
-            key={category.id}
-            className="grid items-center gap-6 rounded-(--radius-card) border border-(--color-border) p-4 md:grid-cols-2 md:p-6"
-          >
-            <div className={index % 2 === 1 ? "md:order-2" : undefined}>
-              {category.image ? (
-                <MediaThumb
-                  media={category.image}
-                  aspect="cover"
-                  width={800}
-                  sizes="(max-width: 768px) 100vw, 560px"
-                />
-              ) : (
-                <MediaPlaceholder aspect="cover" />
+    <section className="category-section site-section">
+      <div className="site-shell">
+        <SectionHeading>{block.title ?? t("browseCategories")}</SectionHeading>
+        <div className="category-list">
+          {chosen.length === 0 && (
+            <p className="text-(--color-text-muted)">{tCategory("noCategories")}</p>
+          )}
+          {chosen.map((category, index) => (
+            <article key={category.id} className="category-tile">
+              {category.image && (
+                <div className="category-photo">
+                  <MediaThumb
+                    media={category.image}
+                    aspect="cover"
+                    width={800}
+                    sizes="(max-width: 768px) 100vw, 560px"
+                  />
+                </div>
               )}
-            </div>
-            <div>
-              <h3 className="text-xl font-medium">{category.name}</h3>
+              <span className="category-index" aria-hidden="true">
+                {String(index + 1).padStart(2, "0")}
+              </span>
+              <h3>{category.name}</h3>
               <p className="mt-2 text-sm text-(--color-text-muted)">
                 {tCategory("count", { count: category.productCount })}
               </p>
               {category.description && (
-                <p className="mt-4 text-(--color-text)">{category.description}</p>
+                <p className="category-description">{category.description}</p>
               )}
-              <Link
-                href={`/category/${category.slug}`}
-                className="mt-6 inline-flex items-center rounded-(--radius-control) border border-(--color-border) px-4 py-2.5 text-sm text-(--color-brand) hover:border-(--color-brand) hover:text-(--color-brand-hover)"
-              >
+              <Link href={`/category/${category.slug}`} className="category-link">
                 {t("viewCategory")}
+                <SiteIcon name="arrow" />
               </Link>
-            </div>
-          </article>
-        ))}
+            </article>
+          ))}
+        </div>
       </div>
     </section>
   );
@@ -202,7 +215,7 @@ function WhyUsGrid({ block }: { block: Extract<Section, { type: "why_us_grid" }>
   return (
     <section className={`${CONTAINER} py-16`}>
       {block.title && <SectionHeading>{block.title}</SectionHeading>}
-      <ul className="mt-8 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+      <ul className="why-grid mt-8 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
         {block.items.map((item, index) => (
           <li key={index}>
             <h3 className="text-lg font-medium text-(--color-heading)">{item.heading}</h3>

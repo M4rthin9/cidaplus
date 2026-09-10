@@ -99,3 +99,10 @@ pnpm.cmd admin:create admin@cidapt.com "ผู้ดูแลระบบ" owner
 - **Soft delete** on categories, products, posts, media. Check usage before allowing a delete.
 - **Sanitize Tiptap JSON server-side.** Never `dangerouslySetInnerHTML` on stored content.
 - No `any`, no non-null assertion without a comment justifying it.
+
+## Premium design preview
+
+Run `pnpm build:preview` to generate a standalone review in `out/` using the shared storefront
+components and clearly labeled seed data. The preview has no live admin, LINE tracking, or enquiry
+submission. Normal `pnpm build` still builds the full Next.js application. See
+[`docs/PREMIUM-REDESIGN.md`](docs/PREMIUM-REDESIGN.md) for design changes, CMS behavior, and validation.

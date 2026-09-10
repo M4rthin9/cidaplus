@@ -16,12 +16,12 @@ export function ProductCard({ product }: { product: ProductCardData }) {
   const price = formatPrice(product.price);
 
   return (
-    <article className="group">
+    <article className="product-card group">
       <Link
         href={`/product/${product.slug}`}
         className="block rounded-(--radius-card) focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-(--color-brand)"
       >
-        <div className="overflow-hidden rounded-(--radius-card) border border-(--color-border) transition-colors group-hover:border-(--color-heading)/15">
+        <div className="product-card-media overflow-hidden rounded-(--radius-card) transition-colors">
           {product.image ? (
             <MediaThumb
               media={product.image}
@@ -43,7 +43,7 @@ export function ProductCard({ product }: { product: ProductCardData }) {
          * Never an empty gap: `contact` renders สอบถามราคา in body colour, which
          * is the state most of this catalog is in.
          */}
-        <p className="mt-2 text-lg font-semibold text-(--color-heading)">
+        <p className="product-card-price text-lg text-(--color-heading)">
           {product.priceDisplay === "hidden" ? null : product.priceDisplay === "contact" ||
             price === null ? (
             <span className="text-base font-normal text-(--color-text)">
@@ -60,7 +60,7 @@ export function ProductCard({ product }: { product: ProductCardData }) {
 
 export function ProductGrid({ products }: { products: ProductCardData[] }) {
   return (
-    <ul className="grid grid-cols-2 gap-6 lg:grid-cols-3 xl:grid-cols-4">
+    <ul className="product-grid grid grid-cols-2 gap-6 lg:grid-cols-3 xl:grid-cols-4">
       {products.map((product) => (
         <li key={product.id}>
           <ProductCard product={product} />

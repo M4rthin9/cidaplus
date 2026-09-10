@@ -48,7 +48,10 @@ export default async function PostPage({ params }: Props) {
   const general = await getCachedSetting("general", locale);
 
   return (
-    <main id="content" className="mx-auto max-w-(--container-site) px-4 py-12 md:px-6">
+    <main
+      id="content"
+      className="storefront-page mx-auto max-w-(--container-site) px-4 py-12 md:px-6"
+    >
       {/* §10 names Article for posts, alongside the breadcrumb trail. */}
       <JsonLd
         data={[

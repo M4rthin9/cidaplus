@@ -125,11 +125,4 @@ export async function getPageBySlug(slug: string, locale: string): Promise<PageC
  * yet, and it doubles as the starting point the editor offers when the operator
  * creates the page for the first time.
  */
-export function defaultHomeSections(): SectionsValue {
-  return [
-    { id: "default-hero", type: "hero", isVisible: true, showSeal: true },
-    { id: "default-featured", type: "featured_products", isVisible: true, limit: 8 },
-    { id: "default-categories", type: "category_showcase", isVisible: true, categoryIds: [] },
-    { id: "default-posts", type: "latest_posts", isVisible: true, limit: 3, postType: "all" },
-  ];
-}
+export { defaultHomeSections } from "./default-home";

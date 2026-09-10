@@ -5,7 +5,9 @@ import { FlatCompat } from "@eslint/eslintrc";
 const compat = new FlatCompat({ baseDirectory: dirname(fileURLToPath(import.meta.url)) });
 
 const config = [
-  { ignores: [".next/**", "node_modules/**", "next-env.d.ts", "coverage/**"] },
+  {
+    ignores: [".next/**", "node_modules/**", "next-env.d.ts", "coverage/**", "out/**", "build/**"],
+  },
   ...compat.extends("next/core-web-vitals", "next/typescript", "prettier"),
   {
     rules: {
@@ -22,7 +24,7 @@ const config = [
   },
   {
     // CLI entry points. Printing a result table IS their output, not a stray log.
-    files: ["scripts/**/*.ts", "src/db/seed.ts", "drizzle.config.ts"],
+    files: ["scripts/**/*.ts", "scripts/**/*.mjs", "src/db/seed.ts", "drizzle.config.ts"],
     rules: { "no-console": "off" },
   },
 ];

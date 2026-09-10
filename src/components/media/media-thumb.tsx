@@ -1,5 +1,6 @@
 import { derivativeName, focalPosition, mediaUrl } from "@/lib/media/urls";
 import { cn } from "@/lib/utils";
+import { SiteIcon } from "@/components/site/icons";
 
 export type ThumbMedia = {
   id: string;
@@ -40,12 +41,14 @@ export function MediaThumb({
   aspect = "square",
   className,
   sizes = "(max-width: 640px) 50vw, 200px",
+  priority = false,
 }: {
   media: ThumbMedia;
   width?: 400 | 800 | 1600;
   aspect?: "square" | "product" | "cover";
   className?: string;
   sizes?: string;
+  priority?: boolean;
 }) {
   const ratio = aspect === "product" ? "3 / 4" : aspect === "cover" ? "16 / 9" : "1 / 1";
   const widths = availableWidths(media.width);
@@ -78,7 +81,8 @@ export function MediaThumb({
             derivativeName(fallbackWidth as 400 | 800 | 1600, "jpeg"),
           )}
           alt={media.alt ?? ""}
-          loading="lazy"
+          loading={priority ? "eager" : "lazy"}
+          fetchPriority={priority ? "high" : undefined}
           decoding="async"
           className="size-full object-cover"
           style={{ objectPosition: focalPosition(media.focalX, media.focalY) }}
@@ -106,11 +110,12 @@ export function MediaPlaceholder({
   return (
     <div
       className={cn(
-        "grid place-content-center rounded-(--radius-card) bg-(--color-surface-alt)",
+        "media-placeholder grid place-content-center rounded-(--radius-card)",
         className,
       )}
       style={{ aspectRatio: ratio }}
     >
+      <SiteIcon name="image" />
       <span className="text-sm text-(--color-text-muted)">{label}</span>
     </div>
   );
