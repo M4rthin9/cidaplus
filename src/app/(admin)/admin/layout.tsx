@@ -26,6 +26,7 @@ const NAV: readonly NavItem[] = [
   { href: "/admin/messages", label: "กล่องข้อความ" },
   { href: "/admin/users", label: "ผู้ดูแลระบบ", ownerOnly: true },
   { href: "/admin/settings/general", label: "ตั้งค่า" },
+  { href: "/admin/trash", label: "ถังขยะ" },
   { href: "/admin/audit", label: "ประวัติการแก้ไข" },
 ];
 
