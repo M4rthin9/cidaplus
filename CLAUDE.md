@@ -540,5 +540,12 @@ upload, originals over the threshold are dropped, and the admin dashboard shows 
   "created" assertion written that way passes without anything being created. Assert on leaving the
   form, and give each E2E run a unique slug — the second run otherwise fails on
   "ลิงก์นี้ถูกใช้แล้ว" and looks like a regression.
+- **`pnpm db:generate` writes `drizzle/meta/` in drizzle-kit's own formatting, which Prettier
+  rejects** — and `pnpm format:check` in CI covers the whole tree, not just `src/`. Generating
+  migration 0003 rewrote `_journal.json` as well as adding `0003_snapshot.json`, so CI went red on
+  two files nobody had edited by hand. **Run `pnpm format` after every `db:generate`.** Reformatting
+  is safe: the files are JSON that drizzle parses, the reformat is whitespace-only (verified by
+  comparing the parsed objects), and a subsequent `db:generate` reports "No schema changes" and
+  leaves the formatting alone.
 - Testing gotcha: `waitUntil: "networkidle"` times out against Next's prefetching on pages with many
   `<Link>`s even though the page itself serves in ~45ms. Use `"load"` plus a short settle.
