@@ -484,3 +484,61 @@ upload, originals over the threshold are dropped, and the admin dashboard shows 
 - **Half of §12's phase-11 verification cannot be run here** — there is no VPS, no DNS control and
   no reachable Cloudflare account. The origin-side mechanism is verified locally as above; "cidapt.com
   serves over Full (strict)" is a first-deploy check, and the RUNBOOK carries it as one.
+
+**Review pass — events, catalog and the caches**
+
+- **Drizzle drops the table qualifier for a column interpolated into a select-field `sql` template.**
+  `sql`(select count(*) from ${products} where ${products.categoryId} = ${categories.id})`` compiles
+  to `where "category_id" = "id"`, and inside the subquery Postgres resolves *both* names against
+  `products` — so it compares `products.category_id` to `products.id`, is never true, and the count
+  is silently 0. Not an error, just wrong data: every category card read "0 รายการ" and every
+  product's LINE click count read 0. The same expression built with `db.select().from().where()`
+  goes through the where-clause path, which qualifies. All four correlated counts live in
+  `src/db/counts.ts` and `counts.test.ts` pins the compiled SQL, because the failure mode is
+  invisible at runtime. `productImageCountFor` was right only by luck — `product_media` has no `id`
+  column, so the bare `"id"` resolved outward to the products row.
+- **`z.url()` accepts `javascript:`, `data:` and `vbscript:`** — all three parse as URLs. The
+  rich-text whitelist, the menu builder and the section builder each already refused unsafe schemes;
+  `settings.contact` did not, and its `facebookUrl` / `youtubeUrl` / `mapEmbedUrl` are rendered into
+  hrefs and an iframe src. `src/lib/validation/url.ts` is now the one guard for operator-typed
+  absolute URLs.
+- **A CMS write must revalidate the storefront by *route pattern*, and a category write must
+  revalidate the layout.** `posts`, `products` and `categories` revalidated only their admin lists,
+  so publishing corrected the site only when the 60s ISR window expired (and the sitemap after an
+  hour). `src/lib/cache/revalidate.ts` owns the mapping; the layout case matters because the shipped
+  header menu renders the live category list.
+- **React 19's post-action form reset also desynchronises a controlled `<select>`.** The DOM falls
+  back to its first option while React still holds the old value, so React sees no change and never
+  rewrites it. On the post form a rejected save kept the title and blanked the event dates, venue,
+  registration link, type (back to `news`, hiding the event fields) and publish state. The fix is
+  the contact form's from phase 7 — echo the submitted values in the action's state — plus an
+  explicit DOM restore, since `defaultValue` does not re-apply after mount.
+- **Events were already modelled; only the public half was missing.** `posts.type` is a `news`/`event`
+  enum with `event_start_at` / `event_end_at` / `event_location` and `end >= start` validation since
+  phase 2. Extending that beat adding an `events` table beside it. "Past" is
+  `coalesce(event_end_at, event_start_at) < now()` evaluated in Postgres — never a flag an operator
+  has to flip, and never the renderer's clock.
+- **News and events share one slug namespace** (`post_i18n.slug` is unique per locale) but are two
+  sections. `/news/<event-slug>` 308s to `/events/<slug>`; `/events/<news-slug>` 307s back. After
+  the redirect TypeScript narrows `post.type`, which turned the news page's dead event branches into
+  compile errors — the compiler confirming the redirect is total.
+- **Seeded event dates are relative to the seed run.** Fixed dates left one side of the
+  upcoming/past split empty depending on when the seed ran, and would eventually have put every
+  seeded event in the past. Row counts stay identical across runs, which is what the idempotency
+  claim actually rests on.
+- **A text filter over a `*_i18n` table belongs in an EXISTS, not a join.** A product has one row per
+  locale, so joining multiplies it and both the page and the `count(*)` come out wrong.
+- **`SectionHeading` is used as the page title on the listing pages**, and it was hard-coded to `h2`,
+  so `/categories`, `/news` and `/events` had no `h1` at all. It takes a level now. `/products` and
+  `/news` also jumped `h1` straight to the `h3` on each card; both list regions carry an `sr-only`
+  `h2` naming the region rather than repeating the page title.
+- **A fixed mobile bar does not clear a sibling `footer`.** `main`'s `pb-24` protects the page body,
+  but the product page's LINE bar sat on top of the footer's own LINE button at the bottom of the
+  document. `body:has(.product-cta-bar) footer` pads it, so only pages that render the bar pay for
+  the space.
+- Testing gotcha: `page.waitForURL(/\/admin\/posts/)` is satisfied by `/admin/posts/new`, so a
+  "created" assertion written that way passes without anything being created. Assert on leaving the
+  form, and give each E2E run a unique slug — the second run otherwise fails on
+  "ลิงก์นี้ถูกใช้แล้ว" and looks like a regression.
+- Testing gotcha: `waitUntil: "networkidle"` times out against Next's prefetching on pages with many
+  `<Link>`s even though the page itself serves in ~45ms. Use `"load"` plus a short settle.
