@@ -123,6 +123,19 @@ const latestPostsBlock = z.object({
   postType: z.enum(["all", "news", "event"]).default("all"),
 });
 
+/**
+ * Distinct from `latest_posts` with postType "event": that block answers "what
+ * did we publish recently", ordered by publication date, and will happily show
+ * an event that finished last year. This one answers "what is happening next",
+ * ordered by the event date and filtered to events that have not ended.
+ */
+const upcomingEventsBlock = z.object({
+  ...base,
+  type: z.literal("upcoming_events"),
+  title: text(255),
+  limit: z.coerce.number().int().min(1).max(12).default(3),
+});
+
 const galleryStripBlock = z.object({
   ...base,
   type: z.literal("gallery_strip"),
@@ -161,6 +174,7 @@ export const sectionSchema = z.discriminatedUnion("type", [
   richTextBlock,
   imageBannerBlock,
   latestPostsBlock,
+  upcomingEventsBlock,
   galleryStripBlock,
   ctaLineBlock,
   faqAccordionBlock,
@@ -182,6 +196,10 @@ export const SECTION_META: Record<SectionType, { label: string; hint: string }> 
   rich_text: { label: "ข้อความอิสระ", hint: "ย่อหน้า หัวข้อ รายการ และรูปจากคลังภาพ" },
   image_banner: { label: "แบนเนอร์ภาพ", hint: "ภาพเต็มความกว้างพร้อมข้อความทับ" },
   latest_posts: { label: "ข่าวและกิจกรรมล่าสุด", hint: "ดึงข่าวล่าสุดมาแสดงอัตโนมัติ" },
+  upcoming_events: {
+    label: "กิจกรรมที่กำลังจะมาถึง",
+    hint: "ดึงกิจกรรมที่ยังไม่สิ้นสุด เรียงตามวันที่จัดงาน",
+  },
   gallery_strip: { label: "แถบภาพ", hint: "ภาพหลายรูปเรียงแนวนอน" },
   cta_line: { label: "แถบติดต่อ LINE", hint: "ข้อความชวนติดต่อพร้อมปุ่ม LINE" },
   faq_accordion: { label: "คำถามที่พบบ่อย", hint: "คำถามและคำตอบแบบพับเก็บได้" },
@@ -267,6 +285,8 @@ export function emptySection(type: SectionType, id: string): Section {
       return { ...common, type };
     case "latest_posts":
       return { ...common, type, limit: 3, postType: "all" };
+    case "upcoming_events":
+      return { ...common, type, limit: 3 };
     case "gallery_strip":
       return { ...common, type, mediaIds: [] };
     case "cta_line":

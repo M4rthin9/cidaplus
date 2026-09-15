@@ -16,6 +16,8 @@ const SLUGGED = [
   { prefix: "/product/", kind: "product" as const },
   { prefix: "/category/", kind: "category" as const },
   { prefix: "/news/", kind: "news" as const },
+  // Events live in post_i18n like news, so the same lookup serves both.
+  { prefix: "/events/", kind: "news" as const },
 ];
 
 /** Strip the locale prefix the middleware may have added. */

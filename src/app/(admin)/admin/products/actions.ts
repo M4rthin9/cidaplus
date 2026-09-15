@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { revalidateCatalog } from "@/lib/cache/revalidate";
 import { redirect } from "next/navigation";
 import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "@/db/client";
@@ -133,6 +134,7 @@ export async function createProductAction(
   });
 
   revalidatePath("/admin/products");
+  revalidateCatalog();
   redirect(`/admin/products/${newId}?created=1`);
 }
 
@@ -225,6 +227,7 @@ export async function updateProductAction(
   });
 
   revalidatePath("/admin/products");
+  revalidateCatalog();
   revalidatePath(`/admin/products/${productId}`);
   return { message: "บันทึกเรียบร้อยแล้ว" };
 }
@@ -250,6 +253,7 @@ export async function deleteProductAction(productId: string): Promise<ProductFor
   });
 
   revalidatePath("/admin/products");
+  revalidateCatalog();
   redirect("/admin/products?deleted=1");
 }
 
@@ -266,6 +270,7 @@ export async function restoreProductAction(productId: string): Promise<ProductFo
     });
   });
   revalidatePath("/admin/products");
+  revalidateCatalog();
   return { message: "กู้คืนสินค้าเรียบร้อยแล้ว" };
 }
 
@@ -309,6 +314,7 @@ export async function bulkProductAction(
   });
 
   revalidatePath("/admin/products");
+  revalidateCatalog();
   const labels = {
     publish: "เผยแพร่",
     unpublish: "ยกเลิกเผยแพร่",
@@ -337,5 +343,6 @@ export async function reorderProductsAction(ids: string[]): Promise<ProductFormS
   });
 
   revalidatePath("/admin/products");
+  revalidateCatalog();
   return { message: "บันทึกลำดับแล้ว" };
 }

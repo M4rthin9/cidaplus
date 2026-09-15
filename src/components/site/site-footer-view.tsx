@@ -24,6 +24,9 @@ export function SiteFooterView({
   const tContact = useTranslations("contact");
   const tLine = useTranslations("line");
   const year = new Date().getFullYear();
+  const hasContactDetails = Boolean(
+    contact.phone || contact.email || general.address || general.businessHours,
+  );
 
   return (
     <footer className="site-footer">
@@ -63,51 +66,60 @@ export function SiteFooterView({
           )}
         </nav>
 
-        <section aria-labelledby="footer-contact">
-          <h2 id="footer-contact" className="text-sm font-semibold text-(--color-heading)">
-            {t("contact")}
-          </h2>
-          <dl className="mt-4 flex flex-col gap-3 text-sm">
-            {contact.phone && (
-              <div>
-                <dt className="text-(--color-text-muted)">{tContact("phone")}</dt>
-                <dd>
-                  <a
-                    href={`tel:${contact.phone.replace(/[^\d+]/g, "")}`}
-                    className="lat text-(--color-brand) hover:text-(--color-brand-hover)"
-                  >
-                    {contact.phone}
-                  </a>
-                </dd>
-              </div>
-            )}
-            {contact.email && (
-              <div>
-                <dt className="text-(--color-text-muted)">{tContact("email")}</dt>
-                <dd>
-                  <a
-                    href={`mailto:${contact.email}`}
-                    className="lat text-(--color-brand) hover:text-(--color-brand-hover)"
-                  >
-                    {contact.email}
-                  </a>
-                </dd>
-              </div>
-            )}
-            {general.address && (
-              <div>
-                <dt className="text-(--color-text-muted)">{tContact("address")}</dt>
-                <dd className="text-(--color-text)">{general.address}</dd>
-              </div>
-            )}
-            {general.businessHours && (
-              <div>
-                <dt className="text-(--color-text-muted)">{tContact("hours")}</dt>
-                <dd className="text-(--color-text)">{general.businessHours}</dd>
-              </div>
-            )}
-          </dl>
-        </section>
+        {/*
+         * Like the second links column, this one only appears once the operator
+         * fills it. SMTP and the phone number are both unset on a fresh install,
+         * so the default state would otherwise be a heading labelling an empty
+         * region — a dead column for a reader and a labelled landmark with no
+         * content for a screen reader.
+         */}
+        {hasContactDetails && (
+          <section aria-labelledby="footer-contact">
+            <h2 id="footer-contact" className="text-sm font-semibold text-(--color-heading)">
+              {t("contact")}
+            </h2>
+            <dl className="mt-4 flex flex-col gap-3 text-sm">
+              {contact.phone && (
+                <div>
+                  <dt className="text-(--color-text-muted)">{tContact("phone")}</dt>
+                  <dd>
+                    <a
+                      href={`tel:${contact.phone.replace(/[^\d+]/g, "")}`}
+                      className="lat text-(--color-brand) hover:text-(--color-brand-hover)"
+                    >
+                      {contact.phone}
+                    </a>
+                  </dd>
+                </div>
+              )}
+              {contact.email && (
+                <div>
+                  <dt className="text-(--color-text-muted)">{tContact("email")}</dt>
+                  <dd>
+                    <a
+                      href={`mailto:${contact.email}`}
+                      className="lat text-(--color-brand) hover:text-(--color-brand-hover)"
+                    >
+                      {contact.email}
+                    </a>
+                  </dd>
+                </div>
+              )}
+              {general.address && (
+                <div>
+                  <dt className="text-(--color-text-muted)">{tContact("address")}</dt>
+                  <dd className="text-(--color-text)">{general.address}</dd>
+                </div>
+              )}
+              {general.businessHours && (
+                <div>
+                  <dt className="text-(--color-text-muted)">{tContact("hours")}</dt>
+                  <dd className="text-(--color-text)">{general.businessHours}</dd>
+                </div>
+              )}
+            </dl>
+          </section>
+        )}
 
         <section aria-labelledby="footer-line">
           <h2 id="footer-line" className="text-sm font-semibold text-(--color-heading)">

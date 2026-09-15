@@ -12,10 +12,11 @@ export function defaultHomeSections(): SectionsValue {
       headline: "งานฝีมือที่ประณีต สร้างโอกาสที่ยั่งยืน",
       body: "เลือกชมผลิตภัณฑ์จากโครงการฝึกวิชาชีพ ทัณฑสถานบำบัดพิเศษกลาง ทุกชิ้นงานสะท้อนความตั้งใจในการเรียนรู้และพัฒนาทักษะ เพื่อเริ่มต้นชีวิตใหม่",
       ctaLabel: "เลือกชมผลิตภัณฑ์",
-      ctaHref: "/categories",
+      ctaHref: "/products",
     },
     { id: "default-featured", type: "featured_products", isVisible: true, limit: 8 },
     { id: "default-categories", type: "category_showcase", isVisible: true, categoryIds: [] },
-    { id: "default-posts", type: "latest_posts", isVisible: true, limit: 3, postType: "all" },
+    { id: "default-events", type: "upcoming_events", isVisible: true, limit: 3 },
+    { id: "default-posts", type: "latest_posts", isVisible: true, limit: 3, postType: "news" },
   ];
 }

@@ -38,6 +38,9 @@ export const posts: PostCardData[] = PREVIEW_POSTS.map((p) => ({
   type: p.type,
   publishedAt: new Date("2026-02-01T00:00:00Z"),
   eventStartAt: "eventStartAt" in p && p.eventStartAt ? new Date(p.eventStartAt) : null,
+  eventEndAt: null,
+  eventLocation: null,
+  isFeatured: false,
   cover: null,
 }));
 export const menu: MenuItems = [

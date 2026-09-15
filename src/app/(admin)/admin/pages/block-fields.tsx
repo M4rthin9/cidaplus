@@ -384,6 +384,29 @@ export function BlockFields({
         </div>
       );
 
+    case "upcoming_events":
+      return (
+        <div className="flex flex-col gap-4">
+          <TextField label="หัวข้อ" value={block.title} onChange={(v) => patch({ title: v })} />
+          <Row label="จำนวนสูงสุด">
+            {(id) => (
+              <Input
+                id={id}
+                type="number"
+                min={1}
+                max={12}
+                value={block.limit}
+                onChange={(e) => patch({ limit: Number(e.target.value) })}
+              />
+            )}
+          </Row>
+          <Hint>
+            แสดงเฉพาะกิจกรรมที่ยังไม่สิ้นสุด เรียงจากวันที่ใกล้ที่สุด หากไม่มีกิจกรรมที่กำลังจะมาถึง
+            บล็อกนี้จะไม่แสดงบนหน้าเว็บ
+          </Hint>
+        </div>
+      );
+
     case "gallery_strip":
       return (
         <div className="flex flex-col gap-4">

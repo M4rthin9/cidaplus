@@ -35,6 +35,8 @@ export default async function NewPostPage() {
           eventStartAt: "",
           eventEndAt: "",
           eventLocation: "",
+          externalUrl: "",
+          isFeatured: false,
         }}
       />
     </div>

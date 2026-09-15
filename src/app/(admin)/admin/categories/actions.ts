@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { revalidateCategories } from "@/lib/cache/revalidate";
 import { redirect } from "next/navigation";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/db/client";
@@ -78,6 +79,7 @@ export async function createCategoryAction(
   });
 
   revalidatePath("/admin/categories");
+  revalidateCategories();
   redirect("/admin/categories?created=1");
 }
 
@@ -171,6 +173,7 @@ export async function updateCategoryAction(
   });
 
   revalidatePath("/admin/categories");
+  revalidateCategories();
   redirect("/admin/categories?updated=1");
 }
 
@@ -219,6 +222,7 @@ export async function deleteCategoryAction(categoryId: string): Promise<Category
   });
 
   revalidatePath("/admin/categories");
+  revalidateCategories();
   return { message: "ลบหมวดหมู่เรียบร้อยแล้ว" };
 }
 
@@ -242,5 +246,6 @@ export async function reorderCategoriesAction(ids: string[]): Promise<CategoryFo
   });
 
   revalidatePath("/admin/categories");
+  revalidateCategories();
   return { message: "บันทึกลำดับแล้ว" };
 }

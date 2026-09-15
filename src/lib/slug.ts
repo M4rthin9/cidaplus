@@ -93,3 +93,18 @@ export function categoryPath(locale: string, slug: string): string {
 export function postPath(locale: string, slug: string): string {
   return `${localePrefix(locale)}/news/${slug}`;
 }
+
+export function eventPath(locale: string, slug: string): string {
+  return `${localePrefix(locale)}/events/${slug}`;
+}
+
+/**
+ * Where a post lives publicly. News and events share one table and one slug
+ * namespace (`post_i18n.slug` is unique per locale), but they are separate
+ * sections of the site, so the canonical URL follows the type. Everything that
+ * links to a post — cards, search, the sitemap, hreflang, redirects — goes
+ * through here rather than picking a prefix itself.
+ */
+export function postTypePath(locale: string, type: "news" | "event", slug: string): string {
+  return type === "event" ? eventPath(locale, slug) : postPath(locale, slug);
+}

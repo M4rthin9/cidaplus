@@ -89,7 +89,16 @@ export async function publishedCategoryEntities(): Promise<SitemapEntity[]> {
   return group(rows, "/category");
 }
 
-export async function publishedPostEntities(): Promise<SitemapEntity[]> {
+/**
+ * News and events are one table but two sections, so they are two sitemap
+ * groups under two prefixes. Listing an event under /news would advertise a URL
+ * that permanently redirects — a crawler follows it and learns the canonical
+ * anyway, but the sitemap is supposed to name canonicals in the first place.
+ */
+async function postEntitiesOfType(
+  type: "news" | "event",
+  prefix: string,
+): Promise<SitemapEntity[]> {
   const rows = await db
     .select({
       id: posts.id,
@@ -99,9 +108,17 @@ export async function publishedPostEntities(): Promise<SitemapEntity[]> {
     })
     .from(posts)
     .innerJoin(postI18n, eq(postI18n.postId, posts.id))
-    .where(live.post);
+    .where(and(live.post, eq(posts.type, type)));
 
-  return group(rows, "/news");
+  return group(rows, prefix);
+}
+
+export async function publishedPostEntities(): Promise<SitemapEntity[]> {
+  return postEntitiesOfType("news", "/news");
+}
+
+export async function publishedEventEntities(): Promise<SitemapEntity[]> {
+  return postEntitiesOfType("event", "/events");
 }
 
 /** CMS pages, excluding the homepage — it has its own entry at `/`. */

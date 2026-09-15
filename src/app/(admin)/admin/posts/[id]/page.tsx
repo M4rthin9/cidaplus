@@ -72,6 +72,8 @@ export default async function EditPostPage({
           eventStartAt: toLocalInput(p.eventStartAt),
           eventEndAt: toLocalInput(p.eventEndAt),
           eventLocation: p.eventLocation ?? "",
+          externalUrl: p.externalUrl ?? "",
+          isFeatured: p.isFeatured,
         }}
       />
 

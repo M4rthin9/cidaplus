@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
-import { Link } from "@/i18n/navigation";
 import { PAGE_SIZE, publishedPosts } from "@/lib/public/queries";
 import { publicMetadata } from "@/lib/seo/metadata";
 import { Breadcrumbs } from "@/components/site/breadcrumbs";
@@ -13,7 +12,7 @@ export const revalidate = 60;
 
 type Props = {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ page?: string; type?: string }>;
+  searchParams: Promise<{ page?: string }>;
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -26,29 +25,16 @@ export default async function NewsPage({ params, searchParams }: Props) {
   const { locale } = await params;
   setRequestLocale(locale);
 
-  const { page: pageParam, type: typeParam } = await searchParams;
+  const { page: pageParam } = await searchParams;
   const page = Number.isInteger(Number(pageParam)) && Number(pageParam) > 0 ? Number(pageParam) : 1;
-  const type = typeParam === "news" || typeParam === "event" ? typeParam : null;
 
   const t = await getTranslations("news");
   const tNav = await getTranslations("nav");
-  const { items, total } = await publishedPosts(locale, type, page);
+  const { items, total } = await publishedPosts(locale, "news", page);
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   if (page > totalPages && total > 0) notFound();
 
-  const filters: { value: "news" | "event" | null; label: string }[] = [
-    { value: null, label: t("all") },
-    { value: "news", label: t("news") },
-    { value: "event", label: t("event") },
-  ];
-
-  const hrefFor = (target: number) => {
-    const query = new URLSearchParams();
-    if (target > 1) query.set("page", String(target));
-    if (type) query.set("type", type);
-    const qs = query.toString();
-    return `/news${qs ? `?${qs}` : ""}`;
-  };
+  const hrefFor = (target: number) => (target > 1 ? `/news?page=${target}` : "/news");
 
   return (
     <main
@@ -57,39 +43,19 @@ export default async function NewsPage({ params, searchParams }: Props) {
     >
       <Breadcrumbs items={[{ href: "/", label: tNav("home") }, { label: t("title") }]} />
 
-      <SectionHeading
-        action={
-          <nav aria-label={t("title")} className="flex flex-wrap gap-2">
-            {filters.map((filter) => {
-              const active = filter.value === type;
-              return (
-                <Link
-                  key={filter.label}
-                  href={filter.value ? `/news?type=${filter.value}` : "/news"}
-                  aria-current={active ? "true" : undefined}
-                  className={
-                    active
-                      ? "rounded-(--radius-control) bg-(--color-brand-tint) px-3 py-1.5 text-sm font-medium text-(--color-brand)"
-                      : "rounded-(--radius-control) px-3 py-1.5 text-sm text-(--color-text) hover:text-(--color-brand)"
-                  }
-                >
-                  {filter.label}
-                </Link>
-              );
-            })}
-          </nav>
-        }
-      >
-        {t("title")}
-      </SectionHeading>
+      <SectionHeading as="h1">{t("title")}</SectionHeading>
 
-      <div className="mt-8">
+      <section aria-labelledby="news-list" className="mt-8">
+        {/* The outline needs a level between the page title and each article's h3. */}
+        <h2 id="news-list" className="sr-only">
+          {t("listLabel")}
+        </h2>
         {items.length > 0 ? (
           <PostCardList posts={items} />
         ) : (
           <p className="text-(--color-text-muted)">{t("empty")}</p>
         )}
-      </div>
+      </section>
 
       <Pagination page={page} totalPages={totalPages} hrefFor={hrefFor} />
     </main>

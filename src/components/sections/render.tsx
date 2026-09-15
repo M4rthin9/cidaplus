@@ -329,6 +329,45 @@ function LatestPosts({
   );
 }
 
+function UpcomingEvents({
+  block,
+  data,
+}: {
+  block: Extract<Section, { type: "upcoming_events" }>;
+  data: SectionData;
+}) {
+  const t = useTranslations("events");
+  const events = data.eventsByBlock[block.id] ?? [];
+
+  /**
+   * Nothing coming up is a real answer, not an error — but a homepage block
+   * that renders an apology takes space from the sections below it, so it
+   * renders nothing at all. The /events page still says so in words, because
+   * there a visitor arrived asking the question.
+   */
+  if (events.length === 0) return null;
+
+  return (
+    <section className={`${CONTAINER} py-16`}>
+      <SectionHeading
+        action={
+          <Link
+            href="/events"
+            className="text-sm text-(--color-brand) hover:text-(--color-brand-hover)"
+          >
+            {t("viewAll")}
+          </Link>
+        }
+      >
+        {block.title ?? t("upcoming")}
+      </SectionHeading>
+      <div className="mt-8">
+        <PostCardList posts={events} />
+      </div>
+    </section>
+  );
+}
+
 function GalleryStrip({
   block,
   data,
@@ -441,6 +480,8 @@ export function SectionRenderer({
       return <ImageBanner block={block} data={data} />;
     case "latest_posts":
       return <LatestPosts block={block} data={data} />;
+    case "upcoming_events":
+      return <UpcomingEvents block={block} data={data} />;
     case "gallery_strip":
       return <GalleryStrip block={block} data={data} />;
     case "cta_line":

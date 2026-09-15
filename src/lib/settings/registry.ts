@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { optionalHttpUrl } from "@/lib/validation/url";
 
 /**
  * The typed settings registry. SPEC.md §6.
@@ -30,10 +31,11 @@ const optionalText = (max: number) =>
     z.string().trim().max(max).optional(),
   );
 
-const optionalUrl = z.preprocess(
-  (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
-  z.url("ต้องเป็นลิงก์ที่ขึ้นต้นด้วย https://").max(2048).optional(),
-);
+/**
+ * `z.url()` alone accepts `javascript:` and `data:`, and every value below
+ * reaches an href or an iframe src on the public site. See validation/url.ts.
+ */
+const optionalUrl = optionalHttpUrl(2048);
 
 // --- general ---------------------------------------------------------------
 
@@ -91,7 +93,10 @@ const lineGlobal = z.object({
 
 const lineLocalized = z.object({
   buttonLabel: z.string().trim().min(1, "กรุณากรอกข้อความบนปุ่ม").max(120),
-  /** Supports {product_name} and {product_url} (§8). */
+  /**
+   * Supports {product_name}, {product_url} and {product_sku} (§8). A line whose
+   * only placeholder is empty is dropped — see renderMessageTemplate.
+   */
   messageTemplate: z.string().trim().min(1, "กรุณากรอกข้อความตั้งต้น").max(500),
 });
 
@@ -165,7 +170,7 @@ export const SETTINGS = {
     localized: lineLocalized,
     localizedDefault: {
       buttonLabel: "สั่งซื้อ / สอบถามทาง LINE",
-      messageTemplate: "สนใจสอบถามสินค้า: {product_name} ({product_url})",
+      messageTemplate: "สนใจสอบถามสินค้า: {product_name}\nรหัสสินค้า: {product_sku}\n{product_url}",
     } as z.infer<typeof lineLocalized>,
   },
   theme: {

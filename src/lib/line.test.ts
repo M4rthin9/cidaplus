@@ -93,3 +93,125 @@ describe("goLinePath", () => {
     expect(goLinePath()).toBe("/go/line");
   });
 });
+
+describe("renderMessageTemplate — product_sku", () => {
+  const withSku = {
+    product_name: "พวงหรีดดอกไม้ประดิษฐ์ ทรงกลม",
+    product_url: "https://cidapt.com/product/puangreed-1",
+    product_sku: "PR-001",
+  };
+
+  it("fills the SKU when the product has one", () => {
+    expect(
+      renderMessageTemplate("สินค้า: {product_name}\nรหัส: {product_sku}\n{product_url}", withSku),
+    ).toBe(
+      "สินค้า: พวงหรีดดอกไม้ประดิษฐ์ ทรงกลม\nรหัส: PR-001\nhttps://cidapt.com/product/puangreed-1",
+    );
+  });
+
+  it("drops the whole line when the SKU is missing, label and all", () => {
+    // The dangling "รหัส:" is the thing this rule exists to prevent.
+    const out = renderMessageTemplate(
+      "สินค้า: {product_name}\nรหัส: {product_sku}\n{product_url}",
+      { ...withSku, product_sku: null },
+    );
+    expect(out).toBe(
+      "สินค้า: พวงหรีดดอกไม้ประดิษฐ์ ทรงกลม\nhttps://cidapt.com/product/puangreed-1",
+    );
+    expect(out).not.toContain("รหัส");
+  });
+
+  it("treats undefined and blank the same as missing", () => {
+    for (const sku of [undefined, "", "   "]) {
+      expect(
+        renderMessageTemplate("รหัส: {product_sku}\n{product_url}", {
+          ...withSku,
+          product_sku: sku,
+        }),
+      ).toBe("https://cidapt.com/product/puangreed-1");
+    }
+  });
+
+  it("keeps the line when something else on it was filled", () => {
+    // Dropping this line would take the product name with it.
+    expect(
+      renderMessageTemplate("{product_name} ({product_sku})", { ...withSku, product_sku: null }),
+    ).toBe("พวงหรีดดอกไม้ประดิษฐ์ ทรงกลม ()");
+  });
+
+  it("still leaves an unknown placeholder visible so a typo is noticed", () => {
+    expect(renderMessageTemplate("สินค้า: {product_nme}", withSku)).toBe("สินค้า: {product_nme}");
+  });
+
+  it("collapses the whitespace a removed placeholder leaves behind", () => {
+    expect(renderMessageTemplate("{product_name}   {product_url}", withSku)).toBe(
+      "พวงหรีดดอกไม้ประดิษฐ์ ทรงกลม https://cidapt.com/product/puangreed-1",
+    );
+  });
+
+  it("does not leave a run of blank lines behind a dropped one", () => {
+    expect(
+      renderMessageTemplate("{product_name}\n\n{product_sku}\n\n{product_url}", {
+        ...withSku,
+        product_sku: null,
+      }),
+    ).toBe("พวงหรีดดอกไม้ประดิษฐ์ ทรงกลม\n\nhttps://cidapt.com/product/puangreed-1");
+  });
+});
+
+describe("oaMessageUrl — encoding the awkward characters (§47)", () => {
+  const url = (message: string) => oaMessageUrl("@355kxfoj", message);
+
+  it("encodes the characters that would otherwise be URL syntax", () => {
+    const out = url("A&B?C/D#E=F");
+    expect(out).toContain("A%26B%3FC%2FD%23E%3DF");
+    // Only the one separating the handle from the message may survive.
+    expect(out.split("?").length - 1).toBe(1);
+    expect(out).not.toMatch(/[#]/);
+  });
+
+  it("encodes a space rather than leaving the URL breakable", () => {
+    expect(url("two words")).toContain("two%20words");
+    expect(url("two words")).not.toContain("two words");
+  });
+
+  it("round-trips Thai, English and Simplified Chinese product names", () => {
+    for (const name of ["พวงหรีดแบ่งปัน", "Shared Wreath", "共享花圈"]) {
+      const out = url(`สินค้า: ${name}`);
+      expect(decodeURIComponent(out.split("/?")[1] ?? "")).toBe(`สินค้า: ${name}`);
+    }
+  });
+
+  it("round-trips a name full of URL metacharacters", () => {
+    const nasty = 'ผ้า & "ไหม" 100% <ชุด> ?a=b#c/d\\e';
+    const out = url(nasty);
+    expect(decodeURIComponent(out.split("/?")[1] ?? "")).toBe(nasty);
+  });
+
+  it("encodes a very long title without corrupting it", () => {
+    const long = "พวงหรีด".repeat(120);
+    expect(decodeURIComponent(url(long).split("/?")[1] ?? "")).toBe(long);
+  });
+
+  it("encodes exactly once — a template is not pre-encoded", () => {
+    const rendered = renderMessageTemplate("สินค้า: {product_name}\n{product_url}", {
+      product_name: "ผ้า & ไหม",
+      product_url: "https://cidapt.com/product/pha-mai?x=1",
+    });
+    const out = url(rendered);
+    expect(out).not.toContain("%25"); // a double encoding would show as %25xx
+    expect(decodeURIComponent(out.split("/?")[1] ?? "")).toBe(rendered);
+  });
+});
+
+describe("goLinePath", () => {
+  it("encodes a Thai slug", () => {
+    expect(goLinePath("พวงหรีด-1")).toBe(
+      "/go/line?p=%E0%B8%9E%E0%B8%A7%E0%B8%87%E0%B8%AB%E0%B8%A3%E0%B8%B5%E0%B8%94-1",
+    );
+  });
+
+  it("encodes a slug containing URL syntax so it cannot add a parameter", () => {
+    expect(goLinePath("a&b=c")).toBe("/go/line?p=a%26b%3Dc");
+  });
+});

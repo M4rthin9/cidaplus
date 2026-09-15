@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { revalidatePosts } from "@/lib/cache/revalidate";
 import { redirect } from "next/navigation";
 import { and, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "@/db/client";
@@ -17,7 +18,42 @@ import { freePostSlug, postSlugTaken, recordSlugRedirect } from "@/lib/catalog/s
 export type PostFormState = {
   readonly errors?: Record<string, string>;
   readonly message?: string;
+  /**
+   * The submitted values, echoed back on a rejection.
+   *
+   * React 19 resets an uncontrolled `<form action={…}>` once the action
+   * returns — including when it returns validation errors — and the reset also
+   * desynchronises controlled `<select>`s, whose React value no longer matches
+   * the DOM. Without this the editor lost the event dates, the venue, the type
+   * and the publish state on every rejected save, keeping only the title.
+   * The same failure was fixed on the public contact form in phase 7; this is
+   * the admin half of it.
+   */
+  readonly values?: Record<string, string>;
 };
+
+/** Everything the form posts, so a rejection can hand it straight back. */
+function submittedValues(formData: FormData): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const name of [
+    "type",
+    "title",
+    "slug",
+    "excerpt",
+    "coverMediaId",
+    "publishState",
+    "publishedAt",
+    "eventStartAt",
+    "eventEndAt",
+    "eventLocation",
+    "externalUrl",
+  ]) {
+    const value = formData.get(name);
+    if (typeof value === "string") out[name] = value;
+  }
+  out.isFeatured = formData.get("isFeatured") === "on" ? "on" : "";
+  return out;
+}
 
 function parse(formData: FormData) {
   return postSchema.safeParse({
@@ -32,6 +68,8 @@ function parse(formData: FormData) {
     eventStartAt: formData.get("eventStartAt") ?? "",
     eventEndAt: formData.get("eventEndAt") ?? "",
     eventLocation: formData.get("eventLocation") ?? "",
+    externalUrl: formData.get("externalUrl") ?? "",
+    isFeatured: formData.get("isFeatured") === "on",
   });
 }
 
@@ -78,11 +116,12 @@ export async function createPostAction(
 ): Promise<PostFormState> {
   const user = await requireAdmin();
   const parsed = parse(formData);
-  if (!parsed.success) return { errors: fieldErrors(parsed.error) };
+  if (!parsed.success)
+    return { errors: fieldErrors(parsed.error), values: submittedValues(formData) };
 
   const base = parsed.data.slug || slugifyWithFallback(parsed.data.title, "post");
   if (parsed.data.slug && (await postSlugTaken(DEFAULT_LOCALE, parsed.data.slug))) {
-    return { errors: { slug: "ลิงก์นี้ถูกใช้แล้ว" } };
+    return { errors: { slug: "ลิงก์นี้ถูกใช้แล้ว" }, values: submittedValues(formData) };
   }
   const slug = await freePostSlug(DEFAULT_LOCALE, base);
   const body = await safeBody(parsed.data.body);
@@ -98,6 +137,8 @@ export async function createPostAction(
         eventStartAt: toDate(parsed.data.eventStartAt),
         eventEndAt: toDate(parsed.data.eventEndAt),
         eventLocation: parsed.data.eventLocation ?? null,
+        externalUrl: parsed.data.externalUrl ?? null,
+        isFeatured: parsed.data.isFeatured,
         authorId: user.id,
         ...publish,
       })
@@ -129,6 +170,7 @@ export async function createPostAction(
   });
 
   revalidatePath("/admin/posts");
+  revalidatePosts();
   redirect(`/admin/posts/${newId}?created=1`);
 }
 
@@ -139,7 +181,8 @@ export async function updatePostAction(
 ): Promise<PostFormState> {
   const user = await requireAdmin();
   const parsed = parse(formData);
-  if (!parsed.success) return { errors: fieldErrors(parsed.error) };
+  if (!parsed.success)
+    return { errors: fieldErrors(parsed.error), values: submittedValues(formData) };
 
   const [before] = await db.select().from(posts).where(eq(posts.id, postId)).limit(1);
   const [beforeI18n] = await db
@@ -151,7 +194,7 @@ export async function updatePostAction(
 
   const requested = parsed.data.slug || slugifyWithFallback(parsed.data.title, "post");
   if (requested !== beforeI18n.slug && (await postSlugTaken(DEFAULT_LOCALE, requested, postId))) {
-    return { errors: { slug: "ลิงก์นี้ถูกใช้แล้ว" } };
+    return { errors: { slug: "ลิงก์นี้ถูกใช้แล้ว" }, values: submittedValues(formData) };
   }
   const slug = await freePostSlug(DEFAULT_LOCALE, requested, postId);
   const body = await safeBody(parsed.data.body);
@@ -166,6 +209,8 @@ export async function updatePostAction(
         eventStartAt: toDate(parsed.data.eventStartAt),
         eventEndAt: toDate(parsed.data.eventEndAt),
         eventLocation: parsed.data.eventLocation ?? null,
+        externalUrl: parsed.data.externalUrl ?? null,
+        isFeatured: parsed.data.isFeatured,
         ...publish,
       })
       .where(eq(posts.id, postId))
@@ -199,6 +244,7 @@ export async function updatePostAction(
   });
 
   revalidatePath("/admin/posts");
+  revalidatePosts();
   revalidatePath(`/admin/posts/${postId}`);
   return { message: "บันทึกเรียบร้อยแล้ว" };
 }
@@ -224,5 +270,6 @@ export async function deletePostAction(postId: string): Promise<PostFormState> {
   });
 
   revalidatePath("/admin/posts");
+  revalidatePosts();
   redirect("/admin/posts?deleted=1");
 }

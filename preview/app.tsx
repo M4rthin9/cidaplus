@@ -35,6 +35,7 @@ const data: SectionData = {
   tagline: general.tagline,
   lineHref,
   productsByBlock: { "default-featured": featured },
+  eventsByBlock: {},
   postsByBlock: { "default-posts": posts },
   categories,
   media: {},
@@ -100,7 +101,10 @@ function Catalog() {
         <p className="max-w-prose">{category.description}</p>
         <div className="my-8 flex flex-wrap items-center justify-between gap-4">
           <p>{selected.length} รายการ</p>
-          <SortLinks basePath={url.pathname} sort={validSort} />
+          <SortLinks
+            sort={validSort}
+            hrefFor={(next) => (next === "default" ? url.pathname : `${url.pathname}?sort=${next}`)}
+          />
         </div>
         <ProductGrid products={selected} />
       </Page>

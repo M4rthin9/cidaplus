@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { getFormatter, getTranslations, setRequestLocale } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { bodyMedia, postBySlug } from "@/lib/public/queries";
@@ -8,6 +8,7 @@ import { getCachedSetting } from "@/lib/settings/cached";
 import { ogImageForStorageKey, publicMetadata } from "@/lib/seo/metadata";
 import { JsonLd, articleJsonLd, breadcrumbJsonLd } from "@/lib/seo/jsonld";
 import { RichText } from "@/lib/richtext/render";
+import { eventPath } from "@/lib/slug";
 import { MediaThumb } from "@/components/media/media-thumb";
 import { Breadcrumbs } from "@/components/site/breadcrumbs";
 
@@ -18,7 +19,7 @@ type Props = { params: Promise<{ locale: string; slug: string }> };
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { locale, slug } = await params;
   const post = await postBySlug(locale, decodeURIComponent(slug));
-  if (!post) return {};
+  if (!post || post.type === "event") return {};
 
   return publicMetadata({
     locale,
@@ -39,6 +40,14 @@ export default async function PostPage({ params }: Props) {
 
   const post = await postBySlug(locale, decodeURIComponent(slug));
   if (!post) notFound();
+
+  /**
+   * Events moved to their own section. Every event previously lived at
+   * /news/<slug> and those URLs are in the wild — in LINE messages, in search
+   * results — so they redirect permanently rather than 404, which is the same
+   * promise `recordSlugRedirect` makes when an operator renames a slug.
+   */
+  if (post.type === "event") permanentRedirect(eventPath(locale, post.slug));
 
   const t = await getTranslations("news");
   const tNav = await getTranslations("nav");
@@ -86,7 +95,7 @@ export default async function PostPage({ params }: Props) {
       <article className="mx-auto max-w-prose">
         <p className="flex flex-wrap items-center gap-2 text-[13px] text-(--color-text-muted)">
           <span className="rounded-(--radius-control) bg-(--color-brand-tint) px-2 py-0.5 text-(--color-brand)">
-            {post.type === "event" ? t("event") : t("news")}
+            {t("news")}
           </span>
           {post.publishedAt && (
             <time dateTime={post.publishedAt.toISOString()}>
@@ -109,35 +118,6 @@ export default async function PostPage({ params }: Props) {
               sizes="(max-width: 768px) 100vw, 720px"
             />
           </div>
-        )}
-
-        {post.type === "event" && (post.eventStartAt ?? post.eventLocation) && (
-          <dl className="mt-8 divide-y divide-(--color-border) border-y border-(--color-border) text-sm">
-            {post.eventStartAt && (
-              <div className="grid grid-cols-3 gap-4 py-3">
-                <dt className="text-(--color-text-muted)">{t("eventDate")}</dt>
-                <dd className="col-span-2 text-(--color-text)">
-                  <time dateTime={post.eventStartAt.toISOString()}>
-                    {format.dateTime(post.eventStartAt, { dateStyle: "long" })}
-                  </time>
-                  {post.eventEndAt && (
-                    <>
-                      {" – "}
-                      <time dateTime={post.eventEndAt.toISOString()}>
-                        {format.dateTime(post.eventEndAt, { dateStyle: "long" })}
-                      </time>
-                    </>
-                  )}
-                </dd>
-              </div>
-            )}
-            {post.eventLocation && (
-              <div className="grid grid-cols-3 gap-4 py-3">
-                <dt className="text-(--color-text-muted)">{t("eventLocation")}</dt>
-                <dd className="col-span-2 text-(--color-text)">{post.eventLocation}</dd>
-              </div>
-            )}
-          </dl>
         )}
 
         {post.excerpt && <p className="mt-8 text-lg text-(--color-text)">{post.excerpt}</p>}

@@ -1,6 +1,21 @@
 import "server-only";
 
-import { and, asc, desc, eq, ilike, inArray, isNull, lte, ne, or, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  exists,
+  gte,
+  ilike,
+  inArray,
+  isNull,
+  lt,
+  lte,
+  ne,
+  or,
+  sql,
+} from "drizzle-orm";
 import { db } from "@/db/client";
 import {
   categories,
@@ -15,6 +30,7 @@ import {
   productSpecs,
   products,
 } from "@/db/schema";
+import { liveProductCountFor } from "@/db/counts";
 import { FALLBACK_LOCALE, resolveTranslation, resolveTranslations } from "@/db/i18n";
 import type { ThumbMedia } from "@/components/media/media-thumb";
 import { referencedMediaIds, type RichDoc } from "@/lib/richtext/schema";
@@ -81,6 +97,9 @@ export type PostCardData = {
   type: "news" | "event";
   publishedAt: Date | null;
   eventStartAt: Date | null;
+  eventEndAt: Date | null;
+  eventLocation: string | null;
+  isFeatured: boolean;
   cover: PublicMedia | null;
 };
 
@@ -215,13 +234,7 @@ export async function publishedCategories(locale: string): Promise<CategoryCardD
     .select({
       id: categories.id,
       heroMediaId: categories.heroMediaId,
-      productCount: sql<number>`(
-        select count(*)::int from ${products}
-        where ${products.categoryId} = ${categories.id}
-          and ${products.isPublished} = true
-          and ${products.publishedAt} <= now()
-          and ${products.deletedAt} is null
-      )`,
+      productCount: liveProductCountFor(categories.id),
     })
     .from(categories)
     .where(and(categoryIsLive, isNull(categories.parentId)))
@@ -388,6 +401,98 @@ export async function productsInCategory(
     .orderBy(...order)
     .limit(PAGE_SIZE)
     .offset((page - 1) * PAGE_SIZE);
+
+  return { items: await toProductCards(rows, locale), total: countRow?.n ?? 0 };
+}
+
+/**
+ * The whole catalog, filtered and paged in SQL.
+ *
+ * §8: "Do not load the entire catalog into the browser merely to filter it."
+ * Every control on /products is a URL parameter that becomes a WHERE or an
+ * ORDER BY here, so a filtered view is a shareable link and the browser only
+ * ever receives one page of rows.
+ *
+ * A category filter includes that category's children. A catalog that silently
+ * omitted the products filed under a subcategory would be a quiet
+ * under-reporting bug of exactly the kind that is hard to notice.
+ *
+ * The text filter matches the localised name via EXISTS rather than a join:
+ * a product has one row per locale in `product_i18n`, so joining would multiply
+ * the product across locales and both the count and the page would be wrong.
+ * SKU is matched on the product row itself, because it is not translated.
+ */
+export async function catalogProducts(
+  locale: string,
+  options: { categoryId?: string | null; query?: string; sort: ProductSort; page: number },
+): Promise<{ items: ProductCardData[]; total: number }> {
+  const text = options.query?.trim() ?? "";
+  const pattern = `%${text}%`;
+
+  const inCategory = options.categoryId
+    ? or(
+        eq(products.categoryId, options.categoryId),
+        inArray(
+          products.categoryId,
+          db
+            .select({ id: categories.id })
+            .from(categories)
+            .where(eq(categories.parentId, options.categoryId)),
+        ),
+      )
+    : undefined;
+
+  const matchesText = text
+    ? or(
+        exists(
+          db
+            .select({ one: sql`1` })
+            .from(productI18n)
+            .where(
+              and(
+                eq(productI18n.productId, products.id),
+                inArray(productI18n.locale, localeSet(locale)),
+                ilike(productI18n.name, pattern),
+              ),
+            ),
+        ),
+        ilike(products.sku, pattern),
+      )
+    : undefined;
+
+  const where = and(productIsLive, categoryIsLive, inCategory, matchesText);
+
+  const countQuery = db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(products)
+    .innerJoin(categories, eq(categories.id, products.categoryId))
+    .where(where);
+
+  const order =
+    options.sort === "newest"
+      ? [desc(products.publishedAt)]
+      : options.sort === "price-asc"
+        ? [asc(products.price)]
+        : options.sort === "price-desc"
+          ? [desc(products.price)]
+          : [asc(products.sortOrder)];
+
+  const [[countRow], rows] = await Promise.all([
+    countQuery,
+    db
+      .select({
+        id: products.id,
+        categoryId: products.categoryId,
+        price: products.price,
+        priceDisplay: products.priceDisplay,
+      })
+      .from(products)
+      .innerJoin(categories, eq(categories.id, products.categoryId))
+      .where(where)
+      .orderBy(...order, asc(products.id))
+      .limit(PAGE_SIZE)
+      .offset((options.page - 1) * PAGE_SIZE),
+  ]);
 
   return { items: await toProductCards(rows, locale), total: countRow?.n ?? 0 };
 }
@@ -575,6 +680,9 @@ async function toPostCards(
     type: "news" | "event";
     publishedAt: Date | null;
     eventStartAt: Date | null;
+    eventEndAt: Date | null;
+    eventLocation: string | null;
+    isFeatured: boolean;
     coverMediaId: string | null;
   }[],
   locale: string,
@@ -618,6 +726,9 @@ async function toPostCards(
       type: row.type,
       publishedAt: row.publishedAt,
       eventStartAt: row.eventStartAt,
+      eventEndAt: row.eventEndAt,
+      eventLocation: row.eventLocation,
+      isFeatured: row.isFeatured,
       cover: row.coverMediaId ? (covers.get(row.coverMediaId) ?? null) : null,
     });
   }
@@ -635,6 +746,9 @@ export async function latestPosts(
       type: posts.type,
       publishedAt: posts.publishedAt,
       eventStartAt: posts.eventStartAt,
+      eventEndAt: posts.eventEndAt,
+      eventLocation: posts.eventLocation,
+      isFeatured: posts.isFeatured,
       coverMediaId: posts.coverMediaId,
     })
     .from(posts)
@@ -660,11 +774,75 @@ export async function publishedPosts(
       type: posts.type,
       publishedAt: posts.publishedAt,
       eventStartAt: posts.eventStartAt,
+      eventEndAt: posts.eventEndAt,
+      eventLocation: posts.eventLocation,
+      isFeatured: posts.isFeatured,
       coverMediaId: posts.coverMediaId,
     })
     .from(posts)
     .where(where)
     .orderBy(desc(posts.publishedAt))
+    .limit(PAGE_SIZE)
+    .offset((page - 1) * PAGE_SIZE);
+
+  return { items: await toPostCards(rows, locale), total: countRow?.n ?? 0 };
+}
+
+/**
+ * Events, split into upcoming and past.
+ *
+ * "Past" is derived from the event's own dates, never from a flag an
+ * administrator has to remember to flip (§13): an event is over once its end
+ * has passed, or — for a single-day event with no end — once its start day is
+ * behind us. `coalesce(event_end_at, event_start_at)` is the one expression
+ * that decides, and it runs in Postgres so the boundary is the database's
+ * clock rather than the clock of whichever machine rendered the page.
+ *
+ * Upcoming events read soonest-first, because the next thing happening is the
+ * useful one; past events read most-recent-first, because that is how an
+ * archive is read. An event with no start date cannot be placed on either side
+ * of "now", so it is treated as upcoming rather than silently buried — the
+ * admin form requires a start date, so this only catches rows predating it.
+ */
+const eventEnds = sql`coalesce(${posts.eventEndAt}, ${posts.eventStartAt})`;
+
+const eventIsLive = and(postIsLive, eq(posts.type, "event"));
+
+const eventColumns = {
+  id: posts.id,
+  type: posts.type,
+  publishedAt: posts.publishedAt,
+  eventStartAt: posts.eventStartAt,
+  eventEndAt: posts.eventEndAt,
+  eventLocation: posts.eventLocation,
+  isFeatured: posts.isFeatured,
+  coverMediaId: posts.coverMediaId,
+};
+
+export async function upcomingEvents(locale: string, limit = PAGE_SIZE): Promise<PostCardData[]> {
+  const rows = await db
+    .select(eventColumns)
+    .from(posts)
+    .where(and(eventIsLive, or(isNull(posts.eventStartAt), gte(eventEnds, sql`now()`))))
+    .orderBy(asc(posts.eventStartAt))
+    .limit(limit);
+
+  return toPostCards(rows, locale);
+}
+
+export async function pastEvents(
+  locale: string,
+  page: number,
+): Promise<{ items: PostCardData[]; total: number }> {
+  const where = and(eventIsLive, lt(eventEnds, sql`now()`));
+
+  const [countRow] = await db.select({ n: sql<number>`count(*)::int` }).from(posts).where(where);
+
+  const rows = await db
+    .select(eventColumns)
+    .from(posts)
+    .where(where)
+    .orderBy(desc(posts.eventStartAt))
     .limit(PAGE_SIZE)
     .offset((page - 1) * PAGE_SIZE);
 
@@ -682,6 +860,8 @@ export type PostDetailData = {
   eventStartAt: Date | null;
   eventEndAt: Date | null;
   eventLocation: string | null;
+  externalUrl: string | null;
+  isFeatured: boolean;
   cover: PublicMedia | null;
   slugsByLocale: Record<string, string>;
 };
@@ -705,6 +885,8 @@ export async function postBySlug(locale: string, slug: string): Promise<PostDeta
       eventStartAt: posts.eventStartAt,
       eventEndAt: posts.eventEndAt,
       eventLocation: posts.eventLocation,
+      externalUrl: posts.externalUrl,
+      isFeatured: posts.isFeatured,
       coverMediaId: posts.coverMediaId,
     })
     .from(posts)
@@ -740,6 +922,8 @@ export async function postBySlug(locale: string, slug: string): Promise<PostDeta
     eventStartAt: row.eventStartAt,
     eventEndAt: row.eventEndAt,
     eventLocation: row.eventLocation,
+    externalUrl: row.externalUrl,
+    isFeatured: row.isFeatured,
     cover: row.coverMediaId ? (covers.get(row.coverMediaId) ?? null) : null,
     slugsByLocale: Object.fromEntries(allI18n.map((r) => [r.locale, r.slug])),
   };
@@ -784,6 +968,9 @@ export async function search(locale: string, query: string): Promise<SearchResul
       type: posts.type,
       publishedAt: posts.publishedAt,
       eventStartAt: posts.eventStartAt,
+      eventEndAt: posts.eventEndAt,
+      eventLocation: posts.eventLocation,
+      isFeatured: posts.isFeatured,
       coverMediaId: posts.coverMediaId,
     })
     .from(posts)

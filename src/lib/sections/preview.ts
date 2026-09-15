@@ -33,6 +33,7 @@ export type PreviewBase = {
 export function buildPreviewData(blocks: SectionsValue, base: PreviewBase): SectionData {
   const productsByBlock: Record<string, ProductCardData[]> = {};
   const postsByBlock: Record<string, PostCardData[]> = {};
+  const eventsByBlock: Record<string, PostCardData[]> = {};
 
   for (const block of blocks) {
     if (block.type === "featured_products") {
@@ -46,11 +47,28 @@ export function buildPreviewData(blocks: SectionsValue, base: PreviewBase): Sect
         block.postType === "all" ? base.posts : base.posts.filter((p) => p.type === block.postType);
       postsByBlock[block.id] = pool.slice(0, block.limit);
     }
+    if (block.type === "upcoming_events") {
+      /**
+       * The same filter `upcomingEvents` applies in SQL, applied here to the
+       * preloaded pool — that equivalence is what makes the preview honest
+       * rather than merely plausible (see the note in sections/data.ts).
+       */
+      const now = Date.now();
+      const pool = base.posts
+        .filter((p) => p.type === "event")
+        .filter((p) => {
+          const ends = p.eventEndAt ?? p.eventStartAt;
+          return !ends || ends.getTime() >= now;
+        })
+        .sort((a, b) => (a.eventStartAt?.getTime() ?? 0) - (b.eventStartAt?.getTime() ?? 0));
+      eventsByBlock[block.id] = pool.slice(0, block.limit);
+    }
   }
 
   return {
     productsByBlock,
     postsByBlock,
+    eventsByBlock,
     categories: base.categories,
     media: base.media,
     siteName: base.siteName,

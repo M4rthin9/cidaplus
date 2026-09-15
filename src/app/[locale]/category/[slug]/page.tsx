@@ -72,13 +72,15 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   // An out-of-range page is a dead end, not an empty grid.
   if (page > totalPages && total > 0) notFound();
 
-  const hrefFor = (target: number) => {
+  const buildHref = (target: number, targetSort: ProductSort) => {
     const query = new URLSearchParams();
     if (target > 1) query.set("page", String(target));
-    if (sort !== "default") query.set("sort", sort);
+    if (targetSort !== "default") query.set("sort", targetSort);
     const qs = query.toString();
     return `/category/${category.slug}${qs ? `?${qs}` : ""}`;
   };
+
+  const hrefFor = (target: number) => buildHref(target, sort);
 
   return (
     <main
@@ -107,7 +109,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
           <div className="mt-3 h-0.5 w-12 rounded-full bg-(--color-brand)" aria-hidden="true" />
           <p className="mt-3 text-sm text-(--color-text-muted)">{t("count", { count: total })}</p>
         </div>
-        <SortLinks basePath={`/category/${category.slug}`} sort={sort} />
+        <SortLinks sort={sort} hrefFor={(next) => buildHref(1, next)} />
       </div>
 
       {category.description && (

@@ -46,6 +46,7 @@ async function resolveProduct(locale: string, slug: string) {
       locale: productI18n.locale,
       name: productI18n.name,
       slug: productI18n.slug,
+      sku: products.sku,
       override: products.lineMessageOverride,
     })
     .from(productI18n)
@@ -92,6 +93,7 @@ export async function GET(
       renderMessageTemplate(template, {
         product_name: product.name,
         product_url: url,
+        product_sku: product.sku,
       }),
     );
   } else {

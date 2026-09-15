@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { and, asc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 import { db } from "@/db/client";
-import { categories, categoryI18n, products } from "@/db/schema";
+import { categories, categoryI18n } from "@/db/schema";
+import { productCountFor } from "@/db/counts";
 import { requireAdmin } from "@/lib/auth/session";
 import { DEFAULT_LOCALE } from "@/lib/slug";
 import { Button, FormBanner } from "@/components/ui/field";
@@ -25,10 +26,7 @@ export default async function CategoriesPage({
       sortOrder: categories.sortOrder,
       name: categoryI18n.name,
       slug: categoryI18n.slug,
-      productCount: sql<number>`(
-        select count(*)::int from ${products}
-        where ${products.categoryId} = ${categories.id} and ${products.deletedAt} is null
-      )`,
+      productCount: productCountFor(categories.id),
     })
     .from(categories)
     .innerJoin(
