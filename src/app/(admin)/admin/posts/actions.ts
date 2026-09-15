@@ -249,6 +249,36 @@ export async function updatePostAction(
   return { message: "บันทึกเรียบร้อยแล้ว" };
 }
 
+/**
+ * Undo a soft delete. Deleting also unpublishes (see deletePostAction), and
+ * restoring deliberately does **not** re-publish: the operator gets the content
+ * back as a draft and decides for themselves whether it goes live again.
+ * Silently republishing something that was deleted — possibly because it was
+ * wrong — is the worse default.
+ */
+export async function restorePostAction(postId: string): Promise<PostFormState> {
+  const user = await requireAdmin();
+  const [before] = await db.select().from(posts).where(eq(posts.id, postId)).limit(1);
+  if (!before) return { message: "ไม่พบข่าวหรือกิจกรรมนี้" };
+  if (!before.deletedAt) return { message: "รายการนี้ไม่ได้ถูกลบ" };
+
+  await db.transaction(async (tx) => {
+    await tx.update(posts).set({ deletedAt: null }).where(eq(posts.id, postId));
+    await writeAudit(tx, {
+      userId: user.id,
+      entity: "posts",
+      entityId: postId,
+      action: "restore",
+      diff: diffFields({ deletedAt: before.deletedAt }, { deletedAt: null }),
+    });
+  });
+
+  revalidatePath("/admin/posts");
+  revalidatePath("/admin/trash");
+  revalidatePosts();
+  return { message: "กู้คืนเรียบร้อยแล้ว" };
+}
+
 export async function deletePostAction(postId: string): Promise<PostFormState> {
   const user = await requireAdmin();
   const [before] = await db.select().from(posts).where(eq(posts.id, postId)).limit(1);

@@ -23,8 +23,12 @@ docker compose -f docker-compose.dev.yml up   # full local stack, seeded, localh
 pnpm dev                                       # app only, against a running db
 pnpm db:generate / db:migrate / db:seed        # drizzle-kit
 pnpm typecheck / lint / test                   # must all pass before a phase is done
-pnpm test:e2e                                  # playwright
+pnpm test:e2e                                  # playwright — needs a build + a migrated, seeded db
 ```
+
+`pnpm test:e2e` drives the real app: run `pnpm db:migrate && pnpm db:seed && pnpm build` first.
+It bootstraps its own admin (`e2e/global-setup.ts`), gives every row it creates an `e2e-` slug, and
+deletes those rows again on the way out, so it is safe against a seeded development database.
 
 ## Non-negotiables
 
@@ -547,5 +551,28 @@ upload, originals over the threshold are dropped, and the admin dashboard shows 
   is safe: the files are JSON that drizzle parses, the reformat is whitespace-only (verified by
   comparing the parsed objects), and a subsequent `db:generate` reports "No schema changes" and
   leaves the formatting alone.
+- **The admin could delete but never restore.** `restoreProductAction` and `restoreMediaAction`
+  existed and nothing called them; posts and categories had no restore action at all; and every
+  admin list filters on `deleted_at is null`, so a soft-deleted row was unreachable from the UI.
+  `/admin/trash` is the way back, and a restored item returns as a **draft** — silently republishing
+  something that was deleted, possibly because it was wrong, is the worse default. Categories are
+  absent on purpose: `products.category_id` is `onDelete: "restrict"`, so a category with products
+  cannot be deleted in the first place.
+- **`waitForURL` on a prefix that the form itself matches never waits.**
+  `/\/admin\/posts(\/|\?)/` is satisfied by `/admin/posts/new`, so the wait returns before the
+  save is attempted and the assertion after it races a still-in-flight Server Action. Wait for
+  something only the *result* has — an id, or `?created=`. Recorded once already for a "created"
+  assertion; it bit again in a different shape.
+- **`getByText(/บันทึก/)` matches the save button, not the success banner** ("บันทึกการเปลี่ยนแปลง"
+  contains it), so a "did the save land" assertion passes instantly and whatever follows races the
+  action. Both update actions return "บันทึกเรียบร้อยแล้ว" — match `เรียบร้อยแล้ว`.
+  `expectSaved()` in `e2e/helpers.ts` is the one place that knows this.
+- **A new product is not at the front of the catalog.** `products.sort_order` is numbered *within a
+  category*, so a newly created product interleaves with every other category's numbering — in
+  practice page 2. Assert on `?sort=newest` rather than on the default order.
+- **Assert the mechanism, not a scroll-position snapshot.** The first version of the sticky-CTA test
+  scrolled to the bottom and measured the gap; it failed for a reason that had nothing to do with
+  the layout (viewport height, scroll settling). Measuring the footer's padding against the bar's
+  height is deterministic and tests the same guarantee.
 - Testing gotcha: `waitUntil: "networkidle"` times out against Next's prefetching on pages with many
   `<Link>`s even though the page itself serves in ~45ms. Use `"load"` plus a short settle.

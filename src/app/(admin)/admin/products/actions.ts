@@ -270,6 +270,7 @@ export async function restoreProductAction(productId: string): Promise<ProductFo
     });
   });
   revalidatePath("/admin/products");
+  revalidatePath("/admin/trash");
   revalidateCatalog();
   return { message: "กู้คืนสินค้าเรียบร้อยแล้ว" };
 }
