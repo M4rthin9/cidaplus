@@ -1,5 +1,6 @@
 import {
   boolean,
+  index,
   integer,
   jsonb,
   numeric,
@@ -16,33 +17,47 @@ import { media } from "./media";
 import { categories } from "./categories";
 import { primaryId, seedFlag, softDelete, timestamps } from "./shared";
 
-export const products = pgTable("products", {
-  id: primaryId(),
-  categoryId: varchar("category_id", { length: 36 })
-    .notNull()
-    .references(() => categories.id, { onDelete: "restrict" }),
-  /** numeric, not float — money must not drift. Null when price_display is contact/hidden. */
-  price: numeric("price", { precision: 12, scale: 2 }),
-  priceDisplay: priceDisplay("price_display").notNull().default("exact"),
-  sku: varchar("sku", { length: 64 }),
-  badge: varchar("badge", { length: 64 }),
-  /** Overrides settings.line.message_template for this product only (SPEC.md §8). */
-  lineMessageOverride: text("line_message_override"),
-  sortOrder: integer("sort_order").notNull().default(0),
-  isFeatured: boolean("is_featured").notNull().default(false),
-  isPublished: boolean("is_published").notNull().default(false),
-  /**
-   * Public queries filter on `is_published AND published_at <= now()` (SPEC.md §9),
-   * which is what makes "scheduled" a state without a third column.
-   */
-  publishedAt: timestamp("published_at", { withTimezone: true }),
-  ogMediaId: varchar("og_media_id", { length: 36 }).references(() => media.id, {
-    onDelete: "set null",
-  }),
-  ...seedFlag,
-  ...softDelete,
-  ...timestamps,
-});
+export const products = pgTable(
+  "products",
+  {
+    id: primaryId(),
+    categoryId: varchar("category_id", { length: 36 })
+      .notNull()
+      .references(() => categories.id, { onDelete: "restrict" }),
+    /** numeric, not float — money must not drift. Null when price_display is contact/hidden. */
+    price: numeric("price", { precision: 12, scale: 2 }),
+    priceDisplay: priceDisplay("price_display").notNull().default("exact"),
+    sku: varchar("sku", { length: 64 }),
+    badge: varchar("badge", { length: 64 }),
+    /** Overrides settings.line.message_template for this product only (SPEC.md §8). */
+    lineMessageOverride: text("line_message_override"),
+    sortOrder: integer("sort_order").notNull().default(0),
+    isFeatured: boolean("is_featured").notNull().default(false),
+    isPublished: boolean("is_published").notNull().default(false),
+    /**
+     * Public queries filter on `is_published AND published_at <= now()` (SPEC.md §9),
+     * which is what makes "scheduled" a state without a third column.
+     */
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    ogMediaId: varchar("og_media_id", { length: 36 }).references(() => media.id, {
+      onDelete: "set null",
+    }),
+    ...seedFlag,
+    ...softDelete,
+    ...timestamps,
+  },
+  (t) => [
+    /** Every catalog listing: live rows in a category, in display order. */
+    index("products_category_published_idx").on(
+      t.deletedAt,
+      t.categoryId,
+      t.isPublished,
+      t.publishedAt,
+    ),
+    index("products_featured_idx").on(t.isFeatured),
+    index("products_sku_idx").on(t.sku),
+  ],
+);
 
 export const productI18n = pgTable(
   "product_i18n",

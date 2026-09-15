@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { MAX_SLUG_LENGTH } from "@/lib/slug";
+import { optionalHttpUrl } from "@/lib/validation/url";
 
 /** Shared by the post form and the post actions (SPEC.md §13). Thai messages. */
 
@@ -39,6 +40,9 @@ export const postSchema = z
     eventStartAt: optionalString(40),
     eventEndAt: optionalString(40),
     eventLocation: optionalString(255),
+    /** Registration or enquiry link for an event. http(s) only — see validation/url.ts. */
+    externalUrl: optionalHttpUrl(512),
+    isFeatured: z.coerce.boolean().default(false),
   })
   .refine((v) => v.publishState !== "scheduled" || Boolean(v.publishedAt), {
     message: "กรุณาเลือกวันและเวลาที่จะเผยแพร่",
@@ -47,6 +51,10 @@ export const postSchema = z
   .refine((v) => v.type !== "event" || Boolean(v.eventStartAt), {
     message: "กิจกรรมต้องระบุวันที่เริ่ม",
     path: ["eventStartAt"],
+  })
+  .refine((v) => v.type === "event" || !v.externalUrl, {
+    message: "ลิงก์ลงทะเบียนใช้ได้เฉพาะกับกิจกรรม",
+    path: ["externalUrl"],
   })
   .refine(
     (v) =>

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { optionalHttpUrl } from "@/lib/validation/url";
 
 /**
  * The typed settings registry. SPEC.md §6.
@@ -30,10 +31,11 @@ const optionalText = (max: number) =>
     z.string().trim().max(max).optional(),
   );
 
-const optionalUrl = z.preprocess(
-  (v) => (typeof v === "string" && v.trim() === "" ? undefined : v),
-  z.url("ต้องเป็นลิงก์ที่ขึ้นต้นด้วย https://").max(2048).optional(),
-);
+/**
+ * `z.url()` alone accepts `javascript:` and `data:`, and every value below
+ * reaches an href or an iframe src on the public site. See validation/url.ts.
+ */
+const optionalUrl = optionalHttpUrl(2048);
 
 // --- general ---------------------------------------------------------------
 

@@ -32,6 +32,8 @@ function parse(formData: FormData) {
     eventStartAt: formData.get("eventStartAt") ?? "",
     eventEndAt: formData.get("eventEndAt") ?? "",
     eventLocation: formData.get("eventLocation") ?? "",
+    externalUrl: formData.get("externalUrl") ?? "",
+    isFeatured: formData.get("isFeatured") === "on",
   });
 }
 
@@ -98,6 +100,8 @@ export async function createPostAction(
         eventStartAt: toDate(parsed.data.eventStartAt),
         eventEndAt: toDate(parsed.data.eventEndAt),
         eventLocation: parsed.data.eventLocation ?? null,
+        externalUrl: parsed.data.externalUrl ?? null,
+        isFeatured: parsed.data.isFeatured,
         authorId: user.id,
         ...publish,
       })
@@ -166,6 +170,8 @@ export async function updatePostAction(
         eventStartAt: toDate(parsed.data.eventStartAt),
         eventEndAt: toDate(parsed.data.eventEndAt),
         eventLocation: parsed.data.eventLocation ?? null,
+        externalUrl: parsed.data.externalUrl ?? null,
+        isFeatured: parsed.data.isFeatured,
         ...publish,
       })
       .where(eq(posts.id, postId))

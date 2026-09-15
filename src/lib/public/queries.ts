@@ -15,6 +15,7 @@ import {
   productSpecs,
   products,
 } from "@/db/schema";
+import { liveProductCountFor } from "@/db/counts";
 import { FALLBACK_LOCALE, resolveTranslation, resolveTranslations } from "@/db/i18n";
 import type { ThumbMedia } from "@/components/media/media-thumb";
 import { referencedMediaIds, type RichDoc } from "@/lib/richtext/schema";
@@ -215,13 +216,7 @@ export async function publishedCategories(locale: string): Promise<CategoryCardD
     .select({
       id: categories.id,
       heroMediaId: categories.heroMediaId,
-      productCount: sql<number>`(
-        select count(*)::int from ${products}
-        where ${products.categoryId} = ${categories.id}
-          and ${products.isPublished} = true
-          and ${products.publishedAt} <= now()
-          and ${products.deletedAt} is null
-      )`,
+      productCount: liveProductCountFor(categories.id),
     })
     .from(categories)
     .where(and(categoryIsLive, isNull(categories.parentId)))

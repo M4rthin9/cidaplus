@@ -22,6 +22,8 @@ export type PostDefaults = {
   eventStartAt: string;
   eventEndAt: string;
   eventLocation: string;
+  externalUrl: string;
+  isFeatured: boolean;
 };
 
 export function PostForm({
@@ -210,14 +212,48 @@ export function PostForm({
                   error={state.errors?.eventLocation}
                 />
               </div>
+              <div>
+                <Label htmlFor="externalUrl">ลิงก์ลงทะเบียน</Label>
+                <Input
+                  id="externalUrl"
+                  name="externalUrl"
+                  inputMode="url"
+                  placeholder="https://"
+                  defaultValue={defaults.externalUrl}
+                  error={state.errors?.externalUrl}
+                />
+                <FieldError id="externalUrl-error" message={state.errors?.externalUrl} />
+                <p className="mt-1 text-xs text-(--color-text-muted)">
+                  ลิงก์ฟอร์มลงทะเบียนหรือหน้าข้อมูลเพิ่มเติม เว้นว่างได้หากรับลงทะเบียนทาง LINE
+                </p>
+              </div>
             </>
           ) : (
             <>
               <input type="hidden" name="eventStartAt" value="" />
               <input type="hidden" name="eventEndAt" value="" />
               <input type="hidden" name="eventLocation" value="" />
+              <input type="hidden" name="externalUrl" value="" />
             </>
           )}
+
+          <div className="flex items-start gap-2">
+            <input
+              id="isFeatured"
+              name="isFeatured"
+              type="checkbox"
+              defaultChecked={defaults.isFeatured}
+              className="mt-1 size-4 accent-(--color-brand)"
+            />
+            <div>
+              <Label htmlFor="isFeatured">แนะนำ</Label>
+              <p className="text-xs text-(--color-text-muted)">
+                {type === "event"
+                  ? "แสดงกิจกรรมนี้เป็นรายการเด่นในหน้าแรกและหน้ารวมกิจกรรม"
+                  : "แสดงข่าวนี้เป็นรายการเด่นในหน้าแรกและหน้ารวมข่าว"}
+              </p>
+            </div>
+          </div>
 
           <div>
             <Label htmlFor="publishState" required>

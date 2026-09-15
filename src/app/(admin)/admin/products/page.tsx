@@ -1,14 +1,8 @@
 import Link from "next/link";
-import { and, asc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 import { db } from "@/db/client";
-import {
-  categories,
-  categoryI18n,
-  lineClicks,
-  productI18n,
-  productMedia,
-  products,
-} from "@/db/schema";
+import { categories, categoryI18n, productI18n, products } from "@/db/schema";
+import { productClickCountFor, productImageCountFor } from "@/db/counts";
 import { requireAdmin } from "@/lib/auth/session";
 import { RETENTION_DAYS } from "@/lib/clicks";
 import { DEFAULT_LOCALE } from "@/lib/slug";
@@ -36,15 +30,9 @@ export default async function ProductsPage({
       priceDisplay: products.priceDisplay,
       isPublished: products.isPublished,
       publishedAt: products.publishedAt,
-      imageCount: sql<number>`(
-        select count(*)::int from ${productMedia} where ${productMedia.productId} = ${products.id}
-      )`,
+      imageCount: productImageCountFor(products.id),
       /* Per-product click count over the retention window (SPEC.md §8 item 5). */
-      clicks: sql<number>`(
-        select count(*)::int from ${lineClicks}
-        where ${lineClicks.productId} = ${products.id}
-          and ${lineClicks.createdAt} >= now() - make_interval(days => ${RETENTION_DAYS})
-      )`,
+      clicks: productClickCountFor(products.id, RETENTION_DAYS),
     })
     .from(products)
     .innerJoin(
