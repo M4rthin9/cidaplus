@@ -49,7 +49,8 @@
     "emptyHint": "ลองปรับคำค้นหาหรือเลือกหมวดหมู่อื่น",
     "clear": "ล้างตัวกรอง",
     "resultCount": "พบ {count} รายการ",
-    "resultsFor": "ผลการค้นหาสำหรับ “{query}”"
+    "resultsFor": "ผลการค้นหาสำหรับ “{query}”",
+    "resultsRegion": "รายการสินค้า"
   },
   "product": {
     "price": "ราคา",
@@ -73,7 +74,8 @@
     "eventDate": "วันที่จัดกิจกรรม",
     "eventLocation": "สถานที่",
     "readMore": "อ่านต่อ",
-    "backToIndex": "กลับไปยังข่าวสาร"
+    "backToIndex": "กลับไปยังข่าวสาร",
+    "listLabel": "รายการข่าว"
   },
   "events": {
     "title": "กิจกรรม",

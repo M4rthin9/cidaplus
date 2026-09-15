@@ -36,21 +36,70 @@ export function oaMessageUrl(oaId: string, message: string): string {
   return `https://line.me/R/oaMessage/${encodeURIComponent(handle)}/?${encodeURIComponent(message)}`;
 }
 
-/** The placeholders §8 defines for `settings.line.message_template`. */
+/**
+ * The placeholders `settings.line.message_template` understands.
+ *
+ * `product_sku` is optional because most of this catalog has no product code —
+ * see `renderMessageTemplate` for what an absent value does to the line it sits
+ * on.
+ */
 export type MessageVars = {
   product_name: string;
   product_url: string;
+  product_sku?: string | null;
 };
 
 /**
- * Fill a message template. Unknown placeholders are left as written rather than
- * blanked: an operator who typo'd `{product_nme}` should see their typo in the
- * LINE chat and fix it, not silently send a message with a hole in it.
+ * Fill a message template.
+ *
+ * Three rules, each earning its place:
+ *
+ * 1. An **unknown** placeholder is left as written. An operator who typo'd
+ *    `{product_nme}` should see their typo in the LINE chat and fix it, rather
+ *    than silently send a message with a hole in it.
+ *
+ * 2. A **known but empty** placeholder — in practice `{product_sku}`, since
+ *    most products here have no code — removes the whole line it sits on, but
+ *    only when nothing else on that line was filled in. That is what turns
+ *
+ *        รหัสสินค้า: {product_sku}
+ *
+ *    into nothing at all instead of a dangling "รหัสสินค้า:" label. The guard
+ *    matters: on a one-line template mixing the name and the SKU, dropping the
+ *    line would take the product name with it, so there the SKU simply blanks.
+ *
+ * 3. Whitespace is then tidied — runs of spaces collapsed, lines trimmed,
+ *    blank runs reduced — because a removed placeholder otherwise leaves the
+ *    seams visible in the message the customer actually sends.
+ *
+ * Nothing here escapes anything: the result is a plain string, and
+ * `oaMessageUrl` percent-encodes it exactly once on the way into the URL.
  */
 export function renderMessageTemplate(template: string, vars: MessageVars): string {
-  return template.replace(/\{(\w+)\}/g, (match, key: string) =>
-    key in vars ? vars[key as keyof MessageVars] : match,
-  );
+  const lines = template.split(/\r?\n/).map((line) => {
+    let sawEmpty = false;
+    let sawFilled = false;
+
+    const rendered = line.replace(/\{(\w+)\}/g, (match, key: string) => {
+      if (!(key in vars)) return match;
+      const value = vars[key as keyof MessageVars];
+      if (value === undefined || value === null || value.trim() === "") {
+        sawEmpty = true;
+        return "";
+      }
+      sawFilled = true;
+      return value;
+    });
+
+    if (sawEmpty && !sawFilled) return null;
+    return rendered.replace(/[^\S\n]{2,}/g, " ").trim();
+  });
+
+  return lines
+    .filter((line): line is string => line !== null)
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 /**

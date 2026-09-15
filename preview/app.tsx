@@ -35,6 +35,7 @@ const data: SectionData = {
   tagline: general.tagline,
   lineHref,
   productsByBlock: { "default-featured": featured },
+  eventsByBlock: {},
   postsByBlock: { "default-posts": posts },
   categories,
   media: {},

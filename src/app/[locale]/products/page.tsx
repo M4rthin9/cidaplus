@@ -194,7 +194,15 @@ export default async function ProductsPage({ params, searchParams }: Props) {
         <SortLinks sort={sort} hrefFor={(next) => buildHref({ sort: next })} />
       </div>
 
-      <div className="mt-8">
+      <section aria-labelledby="catalog-results" className="mt-8">
+        {/*
+         * Visually the count above is the label; the outline still needs a
+         * level between the page title and the h3 on each card, or a screen
+         * reader jumps h1 to h3 and the grid reads as part of the filters.
+         */}
+        <h2 id="catalog-results" className="sr-only">
+          {t("resultsRegion")}
+        </h2>
         {items.length > 0 ? (
           <ProductGrid products={items} />
         ) : (
@@ -213,7 +221,7 @@ export default async function ProductsPage({ params, searchParams }: Props) {
             )}
           </div>
         )}
-      </div>
+      </section>
 
       <Pagination
         page={page}

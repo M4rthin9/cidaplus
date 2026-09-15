@@ -31,8 +31,13 @@ export async function ProductLineCta({ slug }: { slug: string }) {
        * Fixed bottom bar on mobile. `pb-[env(safe-area-inset-bottom)]` keeps the
        * button clear of the iOS home indicator, which otherwise sits on top of
        * the tap target on the site's single most important control.
+       *
+       * `main` carries pb-24 so the bar never covers the last row of content,
+       * but the footer is outside `main` — globals.css pads it via
+       * `body:has(.product-cta-bar)` so the footer's own LINE button is not
+       * sitting underneath this one at the bottom of the page.
        */}
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-(--color-border) bg-(--color-bg) p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:hidden">
+      <div className="product-cta-bar fixed inset-x-0 bottom-0 z-40 border-t border-(--color-border) bg-(--color-bg) p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:hidden">
         <LineLink href={href} className="w-full">
           {line.buttonLabel}
         </LineLink>

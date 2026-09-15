@@ -54,7 +54,12 @@ export default async function EventsPage({ params, searchParams }: Props) {
     >
       <Breadcrumbs items={[{ href: "/", label: tNav("home") }, { label: t("title") }]} />
 
-      <SectionHeading>{t("upcoming")}</SectionHeading>
+      <h1 className="text-3xl font-semibold md:text-[40px]">{t("title")}</h1>
+      <div className="mt-3 h-0.5 w-12 rounded-full bg-(--color-brand)" aria-hidden="true" />
+
+      <div className="mt-12">
+        <SectionHeading>{t("upcoming")}</SectionHeading>
+      </div>
       <div className="mt-8">
         {upcoming.length > 0 ? (
           <PostCardList posts={upcoming} />

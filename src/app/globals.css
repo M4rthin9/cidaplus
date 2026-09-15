@@ -574,3 +574,20 @@ h4 {
     transition-duration: 0.01ms !important;
   }
 }
+
+/*
+ * The product page's fixed mobile LINE bar overlaps whatever is at the bottom
+ * of the document. `main` handles its own clearance with pb-24, but the footer
+ * is a sibling of `main`, so at the very bottom of the page the bar sat on top
+ * of the footer's own LINE button — two overlapping copies of the same control.
+ *
+ * Scoped with `:has()` so only pages that actually render the bar pay for the
+ * space. Where `:has()` is unsupported this degrades to the previous overlap
+ * rather than to a broken layout.
+ */
+@media (max-width: 767px) {
+  body:has(.product-cta-bar) footer {
+    /* The bar measures ~73px; 5.5rem leaves a visible gap rather than a flush edge. */
+    padding-bottom: calc(5.5rem + env(safe-area-inset-bottom, 0px));
+  }
+}

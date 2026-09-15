@@ -93,7 +93,10 @@ const lineGlobal = z.object({
 
 const lineLocalized = z.object({
   buttonLabel: z.string().trim().min(1, "กรุณากรอกข้อความบนปุ่ม").max(120),
-  /** Supports {product_name} and {product_url} (§8). */
+  /**
+   * Supports {product_name}, {product_url} and {product_sku} (§8). A line whose
+   * only placeholder is empty is dropped — see renderMessageTemplate.
+   */
   messageTemplate: z.string().trim().min(1, "กรุณากรอกข้อความตั้งต้น").max(500),
 });
 
@@ -167,7 +170,7 @@ export const SETTINGS = {
     localized: lineLocalized,
     localizedDefault: {
       buttonLabel: "สั่งซื้อ / สอบถามทาง LINE",
-      messageTemplate: "สนใจสอบถามสินค้า: {product_name} ({product_url})",
+      messageTemplate: "สนใจสอบถามสินค้า: {product_name}\nรหัสสินค้า: {product_sku}\n{product_url}",
     } as z.infer<typeof lineLocalized>,
   },
   theme: {

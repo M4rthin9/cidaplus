@@ -43,15 +43,19 @@ export default async function NewsPage({ params, searchParams }: Props) {
     >
       <Breadcrumbs items={[{ href: "/", label: tNav("home") }, { label: t("title") }]} />
 
-      <SectionHeading>{t("title")}</SectionHeading>
+      <SectionHeading as="h1">{t("title")}</SectionHeading>
 
-      <div className="mt-8">
+      <section aria-labelledby="news-list" className="mt-8">
+        {/* The outline needs a level between the page title and each article's h3. */}
+        <h2 id="news-list" className="sr-only">
+          {t("listLabel")}
+        </h2>
         {items.length > 0 ? (
           <PostCardList posts={items} />
         ) : (
           <p className="text-(--color-text-muted)">{t("empty")}</p>
         )}
-      </div>
+      </section>
 
       <Pagination page={page} totalPages={totalPages} hrefFor={hrefFor} />
     </main>

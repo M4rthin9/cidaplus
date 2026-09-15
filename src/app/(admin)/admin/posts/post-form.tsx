@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { Button, FieldError, FormBanner, Hint, Input, Label, Select } from "@/components/ui/field";
 import { MediaPicker, type PickerItem } from "@/components/media/media-picker";
 import { RichTextEditor } from "@/components/editor/rich-text-editor";
@@ -53,13 +53,64 @@ export function PostForm({
     if (!slugEdited) setSlug(slugify(title));
   }, [title, slugEdited]);
 
+  /**
+   * Put the editor's work back after a rejected save.
+   *
+   * React 19 resets the form once the action returns, errors included. That
+   * blanks every uncontrolled field, and it desynchronises the controlled
+   * `<select>`s too: the DOM falls back to its first option while React still
+   * believes the old value, so React sees no change and never rewrites it.
+   * Restoring the DOM from the echoed values covers both, and the mirrored
+   * React state is updated alongside so the conditional event fields keep
+   * rendering.
+   */
+  const formRef = useRef<HTMLFormElement>(null);
+  useEffect(() => {
+    const values = state.values;
+    if (!values) return;
+
+    const form = formRef.current;
+    if (form) {
+      for (const [name, value] of Object.entries(values)) {
+        if (name === "isFeatured") continue;
+        const field = form.elements.namedItem(name);
+        if (
+          field instanceof HTMLInputElement ||
+          field instanceof HTMLSelectElement ||
+          field instanceof HTMLTextAreaElement
+        ) {
+          field.value = value;
+        }
+      }
+      const featured = form.elements.namedItem("isFeatured");
+      if (featured instanceof HTMLInputElement) featured.checked = values.isFeatured === "on";
+    }
+
+    if (values.type === "news" || values.type === "event") setType(values.type);
+    if (values.title !== undefined) setTitle(values.title);
+    if (values.slug !== undefined) {
+      setSlug(values.slug);
+      setSlugEdited(true);
+    }
+    if (
+      values.publishState === "draft" ||
+      values.publishState === "scheduled" ||
+      values.publishState === "published"
+    ) {
+      setPublishState(values.publishState);
+    }
+    if (values.coverMediaId !== undefined) {
+      setCover(values.coverMediaId ? [values.coverMediaId] : []);
+    }
+  }, [state]);
+
   const urlFor = (id: string) => {
     const m = media.find((x) => x.id === id);
     return m ? mediaUrl(m.storageKey, derivativeName(800, "jpeg")) : "";
   };
 
   return (
-    <form action={formAction} className="space-y-6" noValidate>
+    <form ref={formRef} action={formAction} className="space-y-6" noValidate>
       {state.message ? (
         <FormBanner kind={state.errors ? "error" : "success"}>{state.message}</FormBanner>
       ) : null}
@@ -117,7 +168,12 @@ export function PostForm({
               error={state.errors?.slug}
             />
             <FieldError id="slug-error" message={state.errors?.slug} />
-            <Hint>{slug ? `/news/${slug}` : "สร้างอัตโนมัติจากหัวข้อ"}</Hint>
+            {/* Events live under /events, so the preview follows the type. */}
+            <Hint>
+              {slug
+                ? `/${type === "event" ? "events" : "news"}/${slug}`
+                : "สร้างอัตโนมัติจากหัวข้อ"}
+            </Hint>
           </div>
 
           <div>

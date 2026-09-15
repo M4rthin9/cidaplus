@@ -6,6 +6,7 @@ import {
   latestPosts,
   mediaByIds,
   publishedCategories,
+  upcomingEvents,
   type CategoryCardData,
   type PostCardData,
   type ProductCardData,
@@ -27,6 +28,7 @@ import type { SectionsValue } from "./schema";
 export type SectionData = {
   productsByBlock: Record<string, ProductCardData[]>;
   postsByBlock: Record<string, PostCardData[]>;
+  eventsByBlock: Record<string, PostCardData[]>;
   categories: CategoryCardData[];
   media: Record<string, PublicMedia>;
   /** Site identity, so a hero with no headline of its own still says who this is. */
@@ -63,8 +65,9 @@ export async function loadSectionData(
 
   const productBlocks = visible.filter((b) => b.type === "featured_products");
   const postBlocks = visible.filter((b) => b.type === "latest_posts");
+  const eventBlocks = visible.filter((b) => b.type === "upcoming_events");
 
-  const [categories, media, productLists, postLists] = await Promise.all([
+  const [categories, media, productLists, postLists, eventLists] = await Promise.all([
     needsCategories ? publishedCategories(locale) : Promise.resolve([]),
     mediaByIds([...mediaIds], locale),
     Promise.all(
@@ -75,11 +78,13 @@ export async function loadSectionData(
         latestPosts(locale, b.limit, b.postType === "all" ? undefined : b.postType),
       ),
     ),
+    Promise.all(eventBlocks.map((b) => upcomingEvents(locale, b.limit))),
   ]);
 
   return {
     productsByBlock: Object.fromEntries(productBlocks.map((b, i) => [b.id, productLists[i] ?? []])),
     postsByBlock: Object.fromEntries(postBlocks.map((b, i) => [b.id, postLists[i] ?? []])),
+    eventsByBlock: Object.fromEntries(eventBlocks.map((b, i) => [b.id, eventLists[i] ?? []])),
     categories,
     media: Object.fromEntries(media),
     ...identity,
@@ -91,6 +96,7 @@ export function emptySectionData(identity: SectionDataInput): SectionData {
   return {
     productsByBlock: {},
     postsByBlock: {},
+    eventsByBlock: {},
     categories: [],
     media: {},
     ...identity,
