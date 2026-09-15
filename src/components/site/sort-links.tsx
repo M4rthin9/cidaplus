@@ -17,7 +17,18 @@ const OPTIONS: {
   { value: "price-desc", key: "sortPriceDesc" },
 ];
 
-export function SortLinks({ basePath, sort }: { basePath: string; sort: ProductSort }) {
+/**
+ * `hrefFor` rather than a base path: the catalog carries a category filter, a
+ * search term and a page number alongside the sort, and a control that rebuilt
+ * the URL from a prefix alone would silently drop them.
+ */
+export function SortLinks({
+  sort,
+  hrefFor,
+}: {
+  sort: ProductSort;
+  hrefFor: (sort: ProductSort) => string;
+}) {
   const t = useTranslations("category");
 
   return (
@@ -25,11 +36,10 @@ export function SortLinks({ basePath, sort }: { basePath: string; sort: ProductS
       <span className="text-sm text-(--color-text-muted)">{t("sort")}</span>
       {OPTIONS.map((option) => {
         const active = option.value === sort;
-        const href = option.value === "default" ? basePath : `${basePath}?sort=${option.value}`;
         return (
           <Link
             key={option.value}
-            href={href}
+            href={hrefFor(option.value)}
             aria-current={active ? "true" : undefined}
             className={
               active

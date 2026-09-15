@@ -154,3 +154,55 @@ export function articleJsonLd(input: {
     publisher: { "@type": "Organization", name: input.siteName },
   };
 }
+
+/**
+ * `Event`, for the events section.
+ *
+ * Google requires `name` and `startDate`; everything else here is emitted only
+ * when the CMS actually holds it. In particular there is no `offers` node —
+ * nothing on this site sells a ticket, and the same reasoning that keeps a
+ * contact-priced product out of `Product.offers` (§10) applies here. There is
+ * no `performer` or `organizer` beyond the institution itself, and no
+ * `eventAttendanceMode`, because the CMS does not record whether an event is
+ * online; asserting `OfflineEventAttendanceMode` would be a guess presented to
+ * a crawler as fact.
+ *
+ * `eventStatus` is likewise absent: `EventScheduled` is the schema default, and
+ * the CMS has no way to express cancelled or postponed, so stating it would add
+ * a claim the operator cannot correct.
+ *
+ * A `location` is emitted as a `Place` only when a venue string exists. Google
+ * treats `location` as required, so an event with no venue is deliberately
+ * ineligible for the rich result rather than carrying an invented address.
+ */
+export function eventJsonLd(input: {
+  base: string;
+  locale: string;
+  name: string;
+  description?: string;
+  path: string;
+  image?: string;
+  startAt: Date;
+  endAt?: Date | null;
+  location?: string | null;
+  siteName: string;
+}): Json {
+  const origin = input.base.replace(/\/+$/, "");
+  const url = absoluteUrl(input.base, input.locale, encodePath(input.path));
+
+  return {
+    "@context": "https://schema.org",
+    "@type": "Event",
+    name: input.name,
+    ...(input.description ? { description: input.description } : {}),
+    url,
+    startDate: input.startAt.toISOString(),
+    ...(input.endAt ? { endDate: input.endAt.toISOString() } : {}),
+    ...(input.image ? { image: [`${origin}${input.image}`] } : {}),
+    ...(input.location
+      ? { location: { "@type": "Place", name: input.location, address: input.location } }
+      : {}),
+    inLanguage: input.locale,
+    organizer: { "@type": "Organization", name: input.siteName, url: origin },
+  };
+}

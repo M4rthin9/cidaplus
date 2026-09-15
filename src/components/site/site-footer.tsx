@@ -36,8 +36,8 @@ export async function SiteFooter() {
   const defaultLinks: MenuItems = [
     {
       id: "categories",
-      label: tNav("categories"),
-      href: "/categories",
+      label: tNav("products"),
+      href: "/products",
       target: "self",
       children: [],
     },
@@ -49,6 +49,7 @@ export async function SiteFooter() {
       children: [],
     })),
     { id: "news", label: tNav("news"), href: "/news", target: "self", children: [] },
+    { id: "events", label: tNav("events"), href: "/events", target: "self", children: [] },
   ];
 
   return (

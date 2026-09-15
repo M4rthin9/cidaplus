@@ -18,7 +18,7 @@ export function PostCard({ post }: { post: PostCardData }) {
   return (
     <article className="post-card group">
       <Link
-        href={`/news/${post.slug}`}
+        href={post.type === "event" ? `/events/${post.slug}` : `/news/${post.slug}`}
         className="block rounded-(--radius-card) focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-(--color-brand)"
       >
         {post.cover && (

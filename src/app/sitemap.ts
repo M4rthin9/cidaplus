@@ -6,6 +6,7 @@ import { DEFAULT_LOCALE } from "@/lib/slug";
 import { absoluteUrl, encodePath } from "@/lib/seo/urls";
 import {
   publishedCategoryEntities,
+  publishedEventEntities,
   publishedPageEntities,
   publishedPostEntities,
   publishedProductEntities,
@@ -22,7 +23,7 @@ import {
  */
 export const revalidate = 3600;
 
-const STATIC_PATHS = ["/", "/categories", "/news", "/contact"] as const;
+const STATIC_PATHS = ["/", "/products", "/categories", "/news", "/events", "/contact"] as const;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = assertEnv().NEXT_PUBLIC_SITE_URL;
@@ -62,12 +63,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       alternates: { languages: languagesFor(entity.paths) },
     }));
 
-  const [productEntities, categoryEntities, postEntities, pageEntities] = await Promise.all([
-    publishedProductEntities(),
-    publishedCategoryEntities(),
-    publishedPostEntities(),
-    publishedPageEntities(HOME_PAGE_KEY),
-  ]);
+  const [productEntities, categoryEntities, postEntities, eventEntities, pageEntities] =
+    await Promise.all([
+      publishedProductEntities(),
+      publishedCategoryEntities(),
+      publishedPostEntities(),
+      publishedEventEntities(),
+      publishedPageEntities(HOME_PAGE_KEY),
+    ]);
 
   const now = new Date();
   const staticEntries: MetadataRoute.Sitemap = STATIC_PATHS.flatMap((path) =>
@@ -87,6 +90,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...categoryEntities.flatMap((e) => expand(e, 0.8)),
     ...productEntities.flatMap((e) => expand(e, 0.8)),
     ...postEntities.flatMap((e) => expand(e, 0.6)),
+    ...eventEntities.flatMap((e) => expand(e, 0.6)),
     ...pageEntities.flatMap((e) => expand(e, 0.5)),
   ];
 }

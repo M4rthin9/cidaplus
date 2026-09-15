@@ -45,9 +45,9 @@ export async function SiteHeader() {
   const defaultMenu: MenuItems = [
     { id: "home", label: t("home"), href: "/", target: "self", children: [] },
     {
-      id: "categories",
-      label: t("categories"),
-      href: "/categories",
+      id: "products",
+      label: t("products"),
+      href: "/products",
       target: "self",
       children: categories.map((category) => ({
         id: category.id,
@@ -57,6 +57,7 @@ export async function SiteHeader() {
       })),
     },
     { id: "news", label: t("news"), href: "/news", target: "self", children: [] },
+    { id: "events", label: t("events"), href: "/events", target: "self", children: [] },
     { id: "contact", label: t("contact"), href: "/contact", target: "self", children: [] },
   ];
 

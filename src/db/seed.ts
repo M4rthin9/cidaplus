@@ -91,6 +91,17 @@ const SPECS = [
   { label: "ระยะเวลาผลิต", value: "๓–๕ วันทำการ" },
 ];
 
+/**
+ * Seeded event dates are relative to the seed run, not fixed calendar dates.
+ * The events page splits upcoming from past on the database clock, so fixed
+ * dates would leave one side of that split empty depending on when the seed
+ * happened to run — and eventually leave every seeded event in the past. Row
+ * counts stay identical across runs, which is what makes the seed idempotent.
+ */
+function inDays(days: number): Date {
+  return new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+}
+
 const POSTS = [
   {
     type: "news" as const,
@@ -109,9 +120,28 @@ const POSTS = [
     slug: "ngan-sadaeng-sinkha-2568",
     title: "งานแสดงและจำหน่ายสินค้าผลิตภัณฑ์ราชทัณฑ์",
     excerpt: "ขอเชิญร่วมชมและเลือกซื้อผลิตภัณฑ์ฝีมือผู้เข้ารับการบำบัด",
-    eventStartAt: "2026-11-14T02:00:00Z",
-    eventEndAt: "2026-11-16T10:00:00Z",
+    eventStartAt: inDays(60),
+    eventEndAt: inDays(62),
     eventLocation: "ลานอเนกประสงค์ ทัณฑสถานบำบัดพิเศษกลาง",
+    isFeatured: true,
+  },
+  {
+    type: "event" as const,
+    slug: "opro-rom-chak-san-kruang-nueng",
+    title: "อบรมระยะสั้น งานเครื่องหนังและงานถัก",
+    excerpt: "หลักสูตรระยะสั้นสำหรับผู้เข้ารับการบำบัด รับจำนวนจำกัด",
+    eventStartAt: inDays(14),
+    eventEndAt: inDays(15),
+    eventLocation: "อาคารฝึกวิชาชีพ ทัณฑสถานบำบัดพิเศษกลาง",
+  },
+  {
+    type: "event" as const,
+    slug: "talat-nat-phalittaphan-raithan",
+    title: "ตลาดนัดผลิตภัณฑ์ราชทัณฑ์ ครั้งที่ ๖",
+    excerpt: "บันทึกภาพบรรยากาศการออกร้านจำหน่ายผลิตภัณฑ์ฝีมือผู้เข้ารับการบำบัด",
+    eventStartAt: inDays(-45),
+    eventEndAt: inDays(-44),
+    eventLocation: "ลานกิจกรรม กรมราชทัณฑ์",
   },
 ];
 
@@ -218,9 +248,10 @@ async function main() {
           type: post.type,
           isPublished: true,
           publishedAt: new Date("2026-02-01T00:00:00Z"),
-          eventStartAt: post.eventStartAt ? new Date(post.eventStartAt) : null,
-          eventEndAt: post.eventEndAt ? new Date(post.eventEndAt) : null,
+          eventStartAt: post.eventStartAt ?? null,
+          eventEndAt: post.eventEndAt ?? null,
           eventLocation: post.eventLocation ?? null,
+          isFeatured: "isFeatured" in post ? post.isFeatured : false,
           isSeed: true,
         })
         .returning({ id: posts.id });
